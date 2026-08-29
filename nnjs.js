@@ -3,9 +3,47 @@
 const csvData = rawCsvData.trim().split('\n').map(row=>row.split(','));
 
 //INPUT LAYER & TARGET INITIALIZATION
+const prenormalizedData = [];
+
 const dataIn = [];
 
-const targetVariables = [];
+const prenormalizedTarget = [];
+
+const targetVar = [];
+
+minMax = {
+    "RM" : {"min":null,"max":null},
+    "AGE" : {"min":null,"max":null},
+    "TAX" : {"min":null,"max":null},
+    "TARGET" : {"min":null,"max":null}
+}
+
+function isMax(valueIn, keyIn){
+    if(minMax[keyIn]["max"]!=null){
+        if(valueIn>minMax[keyIn]["max"]){
+            minMax[keyIn]["max"] = valueIn;  
+        }
+        
+    } 
+    else{
+        minMax[keyIn]["max"] = valueIn;
+    }
+}
+
+function isMin(valueIn, keyIn){
+    if(minMax[keyIn]["min"]!=null){
+        if(valueIn<minMax[keyIn]["min"]){
+            minMax[keyIn]["min"] = valueIn;
+        }
+    }
+    else{
+        minMax[keyIn]["min"] = valueIn;
+    }
+
+}
+
+//Go through and find the max and min of every feature before loading data in (needed for normalization)
+
 
 for(const row of csvData){
     //input vars
@@ -16,15 +54,46 @@ for(const row of csvData){
     //target var 
     const MEDV = parseFloat(row[13]);
 
-    dataIn.push([RM, AGE, TAX]);
+    
+    isMax(RM, "RM");
+    isMax(AGE, "AGE");
+    isMax(TAX, "TAX");
+    isMin(RM, "RM");
+    isMin(AGE, "AGE");
+    isMin(TAX, "TAX");
 
-    //Target variable list
-    targetVariables.push(MEDV);
+    //target var min/max finding
+    isMin(MEDV, "TARGET")
+    isMax(MEDV, "TARGET")
+    
+
+    prenormalizedData.push([RM, AGE, TAX]);
+
+    prenormalizedTarget.push(MEDV);
 }
 
-//NEXT TIME, MAKE A FUNCTION TO NORMALIZE ALL DATA BY CHECKING FOR THE MINIMUM AND MAXIMUM OF THE dataIn values and doing 
-// Value-min()/max()-min()
+//--normalize data--
+//input vars
+for(const row of prenormalizedData){
+    let nRM = row[0];
+    let nAGE = row[1];
+    let nTAX = row[2];
 
+    nRM = (nRM-minMax["RM"]["min"])/(minMax["RM"]["max"]-minMax["RM"]["min"]);
+    nTAX = (nTAX-minMax["TAX"]["min"])/(minMax["TAX"]["max"]-minMax["TAX"]["min"]);
+    nAGE = (nAGE-minMax["AGE"]["min"])/(minMax["AGE"]["max"]-minMax["AGE"]["min"]);
+
+    dataIn.push([nRM, nTAX, nAGE]);
+}
+//target var
+for(const val of prenormalizedTarget){
+    let nMEDV = val
+
+    nMEDV = (nMEDV-minMax["TARGET"]["min"])/(minMax["TARGET"]["max"]-minMax["TARGET"]["min"]);
+
+    targetVar.push(nMEDV);
+}
+console.log(targetVar)
 
 //HIDDEN LAYER INITIALIZATION
 const numOfHiddenLayers = 2;
@@ -149,7 +218,7 @@ for(const instance of dataIn){
     }
 
 
-    console.log(layerWeightedSum(prevOutput, layerWeights['output_layer']))
+    layerWeightedSum(prevOutput, layerWeights['output_layer'])
 }
 
 
