@@ -11,11 +11,24 @@ const prenormalizedTarget = [];
 
 const targetVar = [];
 
-minMax = {
-    "RM" : {"min":null,"max":null},
-    "AGE" : {"min":null,"max":null},
-    "TAX" : {"min":null,"max":null},
-    "TARGET" : {"min":null,"max":null}
+//WRITE THE ABBREVIATIONS YOUD LIKE TO USE FOR EACH FEATURE, BE CONSISTENT FOR SELECTION
+const feature_abbreviations = ["RM", "AGE", "TAX"]
+
+//SELECT FEATURES BY TYPING NAME:VALUE IN GIVEN ROW
+const feature_selection = {
+    "num_of_features":3,
+    "TARGET":13,
+    //put features below
+    "RM":5,
+    "AGE":6,
+    "TAX":9
+}
+
+
+//Sets the default minMax values for each feature as well as target
+minMax = {"TARGET" : {"min":null,"max":null}}
+for(const abbr of feature_abbreviations){
+    minMax[abbr] = {"min":null,"max":null}
 }
 
 function isMax(valueIn, keyIn){
@@ -42,34 +55,41 @@ function isMin(valueIn, keyIn){
 
 }
 
+
+
 //Go through and find the max and min of every feature before loading data in (needed for normalization)
-
-
 for(const row of csvData){
-    //input vars
+    //input data imports into a json
+    const featureRawDataImport = {}
+
     const RM = parseFloat(row[5]);
     const AGE = parseFloat(row[6]);
     const TAX = parseFloat(row[9]);
 
-    //target var 
-    const MEDV = parseFloat(row[13]);
+    for(const abbr of feature_abbreviations){
+        featureRawDataImport[abbr]=row[feature_selection[abbr]]
+    }
 
-    
-    isMax(RM, "RM");
-    isMax(AGE, "AGE");
-    isMax(TAX, "TAX");
-    isMin(RM, "RM");
-    isMin(AGE, "AGE");
-    isMin(TAX, "TAX");
+    //target var data import
+    const TARGET = parseFloat(row[feature_selection["TARGET"]]);
+
+    for(const abbr of feature_abbreviations){
+        isMin(featureRawDataImport[abbr],abbr);
+    }
 
     //target var min/max finding
-    isMin(MEDV, "TARGET")
-    isMax(MEDV, "TARGET")
+    isMin(TARGET, "TARGET");
+    isMax(TARGET, "TARGET");
+
+    const prenormalizedListOut = [];
     
+    for(const abbr of feature_abbreviations){
+        prenormalizedListOut.push(featureRawDataImport[abbr])
+    }
 
-    prenormalizedData.push([RM, AGE, TAX]);
 
-    prenormalizedTarget.push(MEDV);
+    prenormalizedData.push(prenormalizedListOut);
+    prenormalizedTarget.push(TARGET);
 }
 
 //--normalize data--
@@ -78,6 +98,8 @@ for(const row of prenormalizedData){
     let nRM = row[0];
     let nAGE = row[1];
     let nTAX = row[2];
+
+    //THIS NEXT!!!!!!!!!!!!!!!!!!!!!!!!!
 
     nRM = (nRM-minMax["RM"]["min"])/(minMax["RM"]["max"]-minMax["RM"]["min"]);
     nTAX = (nTAX-minMax["TAX"]["min"])/(minMax["TAX"]["max"]-minMax["TAX"]["min"]);
