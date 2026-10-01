@@ -62,10 +62,6 @@ for(const row of csvData){
     //input data imports into a json
     const featureRawDataImport = {}
 
-    const RM = parseFloat(row[5]);
-    const AGE = parseFloat(row[6]);
-    const TAX = parseFloat(row[9]);
-
     for(const abbr of feature_abbreviations){
         featureRawDataImport[abbr]=row[feature_selection[abbr]]
     }
@@ -95,27 +91,28 @@ for(const row of csvData){
 //--normalize data--
 //input vars
 for(const row of prenormalizedData){
-    let nRM = row[0];
-    let nAGE = row[1];
-    let nTAX = row[2];
 
-    //THIS NEXT!!!!!!!!!!!!!!!!!!!!!!!!!
+    const normalizedOut = [];
 
-    nRM = (nRM-minMax["RM"]["min"])/(minMax["RM"]["max"]-minMax["RM"]["min"]);
-    nTAX = (nTAX-minMax["TAX"]["min"])/(minMax["TAX"]["max"]-minMax["TAX"]["min"]);
-    nAGE = (nAGE-minMax["AGE"]["min"])/(minMax["AGE"]["max"]-minMax["AGE"]["min"]);
-
-    dataIn.push([nRM, nTAX, nAGE]);
+    for(const abbr of feature_abbreviations){
+        const extractedValue = row[feature_selection[abbr]];
+        console.log(row)
+        normalizedOut.push((extractedValue-minMax[abbr]["min"])/(minMax[abbr]["max"]-minMax[abbr]["min"]));
+        
+    }
+    
+    dataIn.push(normalizedOut);
+    
 }
+
 //target var
 for(const val of prenormalizedTarget){
-    let nMEDV = val
+    
+    const normalizedTarget = (val-minMax["TARGET"]["min"])/(minMax["TARGET"]["max"]-minMax["TARGET"]["min"]);
 
-    nMEDV = (nMEDV-minMax["TARGET"]["min"])/(minMax["TARGET"]["max"]-minMax["TARGET"]["min"]);
-
-    targetVar.push(nMEDV);
+    targetVar.push(normalizedTarget);
 }
-console.log(targetVar)
+
 
 //HIDDEN LAYER INITIALIZATION
 const numOfHiddenLayers = 2;
@@ -145,8 +142,8 @@ const layerBiases = {};
 const defaultBias = 0;
 
 for(let i = 0; i < numOfHiddenLayers; i++){
-    layerWeights[`hidden_layer_${i}`] = []
-    layerBiases[`hidden_layer_${i}`] = []
+    layerWeights[`hidden_layer_${i}`] = [];
+    layerBiases[`hidden_layer_${i}`] = [];
 
     for(let j = 0; j < neuronsPerHiddenLayer; j++){
         layerWeights[`hidden_layer_${i}`].push([]);
@@ -228,6 +225,8 @@ function applyRelu(vectorIn){
 
 for(const instance of dataIn){
     const inputVector = instance;
+
+
     
     let prevOutput = inputVector;
 
@@ -242,7 +241,6 @@ for(const instance of dataIn){
 
     layerWeightedSum(prevOutput, layerWeights['output_layer'])
 }
-
 
 
 
