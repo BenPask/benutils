@@ -63,7 +63,7 @@ for(const feat_name of Object.keys(feature_selection)){
 console.log(normalized);
 
 const model = benlib.neuralnet({
-    hidden_layer_info: {"count":5, "init_size":5, "style":"increasing"},
+    hidden_layer_info: {count:5, init_size:5, style:"increasing"},
     activation:"relu",
     learn_rate:0.001,
     epochs:1000

@@ -175,7 +175,7 @@ function train(feature_data, target_data){
 
 export function neuralnet({
     //default parameters for neurat net initialization
-    hidden_layer_info = {"count":5, "init_size":5, "style":"decreasing"},
+    hidden_layer_info = {count:5, init_size:5, style:"decreasing"},
     activation_type = "relu",
     learn_rate = 0.01,
     epochs = 100}={}) {
@@ -189,7 +189,7 @@ export function neuralnet({
             epochs:epochs};
 
 
-        const modelOut = {layers:{},properties:model_properties, train, iteration, build_matrices, fwd_pass};
+        const modelOut = {layers:{},properties:model_properties, train};
         
         return modelOut;
     }
