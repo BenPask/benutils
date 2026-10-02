@@ -1,9 +1,9 @@
 //-------RANDOM-------
-let seed = 82945;
+let seed = 23536;
 
 export function zto_random(){
     const a = 49234
-    const m = 5555555557 //large prime number
+    const m = 1000000007 //large prime number
 
     //calc next seed
     seed = (seed*a)%m;
@@ -36,10 +36,11 @@ export function transpose_matrix(m){
 }
 
 export function matmult(m1, m2){
-
+    
     //transpose m2 for easier multiplication
     m2 = transpose_matrix(m2)
-
+    
+    
     //vars for # of rows
     const m1_rows = m1.length;
     const m2_rows = m2.length;
@@ -49,7 +50,7 @@ export function matmult(m1, m2){
     const m2_cols = m2[0].length;
 
     if(m1_cols != m2_cols){
-        throw new Error("m1 must have as many columns as m2 has rows")
+        throw new Error("m2 must have as many columns as m1 has rows")
     }
 
     const product = [];
@@ -96,82 +97,130 @@ function generate_weight(){
     return weightOut;
 }
 
-function fwd_pass(layer_index){
-    const i_layers = Object.values(this.layers);
+function fwd_pass(model, layer_index){
+    const indexed_layers = Object.values(model.layers);
 
-    const prev_layer_output = i_layers[layer_index-1]["output"];
-    const weight_matrix = i_layers[layer_index]["weights"];
+    const prev_layer_output = indexed_layers[layer_index-1]["output"];
+    const weight_matrix = indexed_layers[layer_index]["main"]["weights"];
+    const bias_arr = indexed_layers[layer_index]["main"]["biases"];
 
-    i_layers[layer_index]["output"] = matmult(weight_matrix, prev_layer_output);
+    const multiplied_output = matmult(weight_matrix, prev_layer_output);
     
-}
+    let arr_out = [];
 
-function set_import_values(){
-    
-}
-
-function iteration(feature_data, target_data, i){
-
-    const i_layers = Object.values(this.layers);
-
-    const in_layer_arr = [];
-
-    //push the observations input values into the input_layer's "output":x
-    for(const feat_name of Object.keys(feature_data)){
-        in_layer_arr.push(feature_data[feat_name][i]);
-        this.layers["input_layer"]["output"] = in_layer_arr;
+    for(let i = 0;i<multiplied_output.length;i++){
+        const val = multiplied_output[i][0]+bias_arr[i][0];
+        arr_out.push([val]);
     }
 
-    console.log(i_layers);
+    //dynamic activation function based on model.properties.activation_type
+    arr_out = activate(model, arr_out);
+
+    indexed_layers[layer_index]["output"] = arr_out;   
 }
 
-function build_matrices(feature_data){
-    const in_layer_size = Object.keys(feature_data).length; 
+function activate(model, arr_in){
+    const acitvation_func = activation_map[model.properties.activation_type];
+    return acitvation_func(arr_in);
+}
 
+function build_matrices(model){
     //build default structure CHANGE LATER
-    this.layers["input_layer"] = {"output":[]};
-    for(let i = 1;i<=this.properties.hidden_layer_info.count;i++){
-        this.layers[`hidden_layer_${i}`] = {"weights":[], "delta":[], "output":[]};
+    model.layers["input_layer"] = {"output":[]};
+    for(let i = 1;i<=model.properties.hidden_layer_info.count;i++){
+        model.layers[`hidden_layer_${i}`] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]}, "output":[]};
     }
-    this.layers["output_layer"] = {"weights":[], "delta":[], "output":[]};
+    model.layers["output_layer"] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]}, "output":[]};
 
+    //we have 1D arrays for the main & delta weights, we now add an amount of arrays(rows of matrix) for the size of the layer
+    //This next line just lets us call the layers in order via index. 0 is the input layer
+    const indexed_layers = Object.values(model.layers);
 
-    //Start generating weights and layer matrices
-    const indexed_layers = Object.values(this.layers);
-
-    let prev_layer_ncount = in_layer_size;
-
-    //weight generation and matrix builder
+    //matrix builder, does not yet contain columns or weights ie: layers["hidden_layer_1"] = [[][][][][]] if hidden layer size was 5
     for(let i=1; i<indexed_layers.length; i++){
-        for(let r = 0; r<this.properties.hidden_layer_info["init_size"];r++){
-            const row_out = []
-            for(let c = 0; c<prev_layer_ncount; c++){
-                row_out.push(generate_weight())
-            }
-            indexed_layers[i]["weights"].push(row_out);
+        for(let r = 0; r<model.properties.hidden_layer_info["init_size"];r++){
+            //add empty rows to main layer's weights & biases
+            indexed_layers[i]["main"]["weights"].push([]);
+            indexed_layers[i]["main"]["biases"].push([]);
+
+            //add empty rows to delta version of the layer's weights & biases
+            indexed_layers[i]["delta"]["weights"].push([]);
+            indexed_layers[i]["delta"]["biases"].push([]);
         }
-        prev_layer_ncount = indexed_layers[i]["weights"].length
     }    
 }
 
-function train(feature_data, target_data){
+function fill_matrices(model, feature_count){
+    const indexed_layers = Object.values(model.layers);
+
+    //Because the amount of columns(weights) per layer are determined by the output of the previouse layer,
+    //initialize the count to be the size of the INPUT layer, then adjust as you move through the layers
+    let prev_layer_size = feature_count
+
+    for(let i=1; i<indexed_layers.length; i++){
+        for(const m_row of indexed_layers[i]["main"]["weights"]){
+            //push a generated weight for the size of the previous layers output.
+            for(let i = 0;i<prev_layer_size;i++) m_row.push(generate_weight());
+        }
+        //update the previous layer size variable to be this layer before moving on
+        prev_layer_size = indexed_layers[i]["main"]["weights"].length
+
+        for(const b_row of indexed_layers[i]["main"]["biases"]){
+            b_row.push(0);
+        }
+    }    
+}
+
+function train(model, feature_data, target_data){
     const observation_count = target_data["TARGET"].length
+    //# of features being used NOT including target
+    const feature_count = Object.keys(feature_data).length;
     
-    
+    //guardrail to confirm all features including target have the same number of observations
     for(const feat_name of Object.keys(feature_data)){
         if(observation_count != feature_data[feat_name].length){
-            throw new Error("Features and targets are not all the same size!(possibly format)");
+            throw new Error("Features and targets are not all the same size!(or wrong input format, etc.)");
         }
     }
 
-    this.build_matrices(feature_data);
-    
-    //for(const e = 0;e<this.epochs;e++){
-        for(let i = 0;i<observation_count;i++){
-            console.log(this.iteration(feature_data, target_data, i))
-        }
-    //}
+
+
+    //build simple structure without columns or weights, but including rows via the neuron count(size) of each layer
+    build_matrices(model);
+    fill_matrices(model, feature_count)
+    iteration(model, 0, feature_data, target_data)
 }
+
+function iteration(model, obs_num, feature_data, target_data){
+    model.layers["input_layer"]["output"] = [];
+
+    //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
+    for(const feat_name of Object.keys(feature_data)){
+        model.layers["input_layer"]["output"].push([feature_data[feat_name][obs_num]]);
+    };
+
+    for(let i = 1;i < Object.keys(model.layers).length; i++){
+        fwd_pass(model, i)
+    }
+
+}
+
+function reluAcivation(arr){
+    const arrOut = [];
+    for(let i = 0;i<arr.length;i++){
+        const val = arr[i][0];
+        if(arr[i] < 0){
+            arrOut.push([0]);
+        } else{
+            arrOut.push([val]);
+        }
+    }
+    
+    return arrOut
+}
+
+const activation_map = {"relu":reluAcivation}
+//const deriv_acitvation_map = {"relu":derivReluActivation()}
 
 export function neuralnet({
     //default parameters for neurat net initialization
@@ -188,8 +237,12 @@ export function neuralnet({
             learn_rate:learn_rate,
             epochs:epochs};
 
-
-        const modelOut = {layers:{},properties:model_properties, train};
+        const modelOut = {
+            layers:{},
+            properties:model_properties, 
+            train(feature_data, target_data){
+                train(this, feature_data, target_data)
+            }};
         
         return modelOut;
     }

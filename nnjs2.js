@@ -71,6 +71,8 @@ const model = benlib.neuralnet({
 
 model.train({"RM":normalized["RM"],"AGE":normalized["AGE"]},{"TARGET":normalized["TARGET"]});
 
+console.log(model.layers)
+
 
 
 
