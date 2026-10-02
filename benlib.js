@@ -50,7 +50,7 @@ export function matmult(m1, m2){
     const m2_cols = m2[0].length;
 
     if(m1_cols != m2_cols){
-        throw new Error("m2 must have as many columns as m1 has rows")
+        throw new Error("m1 m2 dimensional error")
     }
 
     const product = [];
