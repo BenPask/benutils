@@ -15,14 +15,21 @@ export function zto_random(){
 //-------MATRICES-------
 export function transpose_matrix(m){
 
-    const output = [];
+    let output = [];
 
+    if(!Array.isArray(m[0])){
+        return m.map(x => [x])
+    }
     //var for # of rows
     const m_rows = m.length;
 
     //var for # of columns
-    const m_cols = m[0].length;
+    
 
+    const m_cols = m[0].length;
+    
+    
+        
     //for # of columns in matrix
     for(let c = 0; c<m_cols; c++){
         const cur_row_out = [];
@@ -32,47 +39,67 @@ export function transpose_matrix(m){
         }
         output.push(cur_row_out);
     }
+
+    //return to 1-d if only 1 row
+    if(output.length == 1){
+        output = output[0]
+    }
+
     return output;
 }
+
+
 
 export function matmult(m1, m2){
     
     //transpose m2 for easier multiplication
     m2 = transpose_matrix(m2)
-    
-    
-    //vars for # of rows
-    const m1_rows = m1.length;
-    const m2_rows = m2.length;
 
-    //vars for # of columns
-    const m1_cols = m1[0].length;
-    const m2_cols = m2[0].length;
-
-    if(m1_cols != m2_cols){
-        throw new Error("m1 m2 dimensional error")
+    const mats = [m1,m2]
+    //dealing with 1d array cases
+    for(let i = 0; i<mats.length; i++){
+        if(!Array.isArray(mats[i][0])){
+            mats[i] = [mats[i]]
+        }
     }
 
-    const product = [];
+    [m1,m2] = mats;
+    
+    let m1_rows = m1.length;
+    let m1_cols = m1[0].length;
+
+    let m2_rows = m2.length;
+    let m2_cols = m2[0].length;
+
+    if(m1[0].length!=m2[0].length){
+        throw new Error("The amount of columns in m1 must match the amount of rows in m2")
+    }
+
+    let product = [];
 
     //for the # of rows in the first matrix
+    for(let r = 0; r<m1_rows; r++){
+        product.push([]);
+    }
+    
     for(let r_m1 = 0; r_m1<m1_rows; r_m1++){
-        const cur_row_out = [];
-
-        //for the # of rows in the transposition of m2(cols of m2)
+        //for the # of columns in the transposition of m2
         for(let r_m2 = 0; r_m2<m2_rows; r_m2++){
             let cur_value_out = 0;
-
             //for the # of columns in the first matrix
             for(let c_m1 = 0; c_m1<m1_cols; c_m1++){
                 cur_value_out += m1[r_m1][c_m1]*m2[r_m2][c_m1];
             }
-            cur_row_out.push(cur_value_out);
+            product[r_m1].push(cur_value_out);
         }
-        product.push(cur_row_out)
+    }
+    
+    if(product.length == 1){
+        product = product[0]
     }
     return product;
 }
+
 
 //-------DATA-------
 export function normalize_array(arr, max_in, min_in){
@@ -88,7 +115,7 @@ export function normalize_array(arr, max_in, min_in){
 //-------NEURAL_NETWORK-------
 function generate_weight(){
     //b in the equation, constant variable to adjust variance of starting weights
-    const sensitivity = 0.1
+    const sensitivity = 1
 
     const zeroToOne = zto_random();
 
@@ -104,20 +131,30 @@ function fwd_pass(model, layer_index){
     const weight_matrix = indexed_layers[layer_index]["main"]["weights"];
     const bias_arr = indexed_layers[layer_index]["main"]["biases"];
 
-    const multiplied_output = matmult(weight_matrix, prev_layer_output);
+    
+    
+    
+    const t_prev_layer_output = transpose_matrix(prev_layer_output);
+
+    const pre_t_multiplied_output = matmult(weight_matrix, t_prev_layer_output);
+    
+    const multiplied_output = transpose_matrix(pre_t_multiplied_output);
     
     let arr_out = [];
 
     for(let i = 0;i<multiplied_output.length;i++){
-        const val = multiplied_output[i][0]+bias_arr[i][0];
-        arr_out.push([val]);
+        arr_out.push(multiplied_output[i]+bias_arr[i]);
     }
+
+    indexed_layers[layer_index]["preactivation"] = arr_out;
 
     //dynamic activation function based on model.properties.activation_type
     arr_out = activate(model, arr_out);
 
-    indexed_layers[layer_index]["output"] = arr_out;   
+    indexed_layers[layer_index]["output"] = arr_out;
 }
+
+
 
 function activate(model, arr_in){
     const acitvation_func = activation_map[model.properties.activation_type];
@@ -128,9 +165,9 @@ function build_matrices(model){
     //build default structure CHANGE LATER
     model.layers["input_layer"] = {"output":[]};
     for(let i = 1;i<=model.properties.hidden_layer_info.count;i++){
-        model.layers[`hidden_layer_${i}`] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]}, "output":[]};
+        model.layers[`hidden_layer_${i}`] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]},"preactivation":[], "output":[]};
     }
-    model.layers["output_layer"] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]}, "output":[]};
+    model.layers["output_layer"] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]}, "preactivation":[], "output":[]};
 
     //we have 1D arrays for the main & delta weights, we now add an amount of arrays(rows of matrix) for the size of the layer
     //This next line just lets us call the layers in order via index. 0 is the input layer
@@ -141,11 +178,9 @@ function build_matrices(model){
         for(let r = 0; r<model.properties.hidden_layer_info["init_size"];r++){
             //add empty rows to main layer's weights & biases
             indexed_layers[i]["main"]["weights"].push([]);
-            indexed_layers[i]["main"]["biases"].push([]);
 
             //add empty rows to delta version of the layer's weights & biases
             indexed_layers[i]["delta"]["weights"].push([]);
-            indexed_layers[i]["delta"]["biases"].push([]);
         }
     }    
 }
@@ -165,9 +200,10 @@ function fill_matrices(model, feature_count){
         //update the previous layer size variable to be this layer before moving on
         prev_layer_size = indexed_layers[i]["main"]["weights"].length
 
-        for(const b_row of indexed_layers[i]["main"]["biases"]){
-            b_row.push(0);
+        for(let n = 0; n < indexed_layers[i]["main"]["weights"].length; n++){
+            indexed_layers[i]["main"]["biases"].push(0);
         }
+
     }    
 }
 
@@ -196,7 +232,7 @@ function iteration(model, obs_num, feature_data, target_data){
 
     //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
     for(const feat_name of Object.keys(feature_data)){
-        model.layers["input_layer"]["output"].push([feature_data[feat_name][obs_num]]);
+        model.layers["input_layer"]["output"].push(feature_data[feat_name][obs_num]);
     };
 
     for(let i = 1;i < Object.keys(model.layers).length; i++){
@@ -206,16 +242,9 @@ function iteration(model, obs_num, feature_data, target_data){
 }
 
 function reluAcivation(arr){
-    const arrOut = [];
-    for(let i = 0;i<arr.length;i++){
-        const val = arr[i][0];
-        if(arr[i] < 0){
-            arrOut.push([0]);
-        } else{
-            arrOut.push([val]);
-        }
-    }
-    
+    let arrOut = [];
+    arrOut = arr.map(x => x > 0 ? x : 0);
+
     return arrOut
 }
 

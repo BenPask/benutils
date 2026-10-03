@@ -62,6 +62,15 @@ for(const feat_name of Object.keys(feature_selection)){
 
 console.log(normalized);
 
+//[[1, 2, 3],[4,5,6],[7, 8, 9]]
+const mat = [[4],[4],[4]];
+
+let  arr = [[1, 1, 1]];
+
+console.log(benlib.matmult(mat,arr))
+
+
+
 const model = benlib.neuralnet({
     hidden_layer_info: {count:5, init_size:5, style:"increasing"},
     activation:"relu",
