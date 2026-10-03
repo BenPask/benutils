@@ -75,6 +75,7 @@ const model = benlib.neuralnet({
     hidden_layer_info: {count:5, init_size:5, style:"increasing"},
     activation:"relu",
     learn_rate:0.001,
+    output_layer_info:{init_size:1, activation:"none"},
     epochs:1000
 });
 

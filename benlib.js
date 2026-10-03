@@ -18,18 +18,17 @@ export function transpose_matrix(m){
     let output = [];
 
     if(!Array.isArray(m[0])){
+        if(m.length==1){
+            return m
+        }
         return m.map(x => [x])
     }
     //var for # of rows
     const m_rows = m.length;
 
     //var for # of columns
-    
-
     const m_cols = m[0].length;
     
-    
-        
     //for # of columns in matrix
     for(let c = 0; c<m_cols; c++){
         const cur_row_out = [];
@@ -44,7 +43,7 @@ export function transpose_matrix(m){
     if(output.length == 1){
         output = output[0]
     }
-
+    
     return output;
 }
 
@@ -131,32 +130,44 @@ function fwd_pass(model, layer_index){
     const weight_matrix = indexed_layers[layer_index]["main"]["weights"];
     const bias_arr = indexed_layers[layer_index]["main"]["biases"];
 
-    
-    
-    
     const t_prev_layer_output = transpose_matrix(prev_layer_output);
 
+    
     const pre_t_multiplied_output = matmult(weight_matrix, t_prev_layer_output);
     
     const multiplied_output = transpose_matrix(pre_t_multiplied_output);
     
     let arr_out = [];
-
+    
     for(let i = 0;i<multiplied_output.length;i++){
         arr_out.push(multiplied_output[i]+bias_arr[i]);
     }
-
+    
     indexed_layers[layer_index]["preactivation"] = arr_out;
 
     //dynamic activation function based on model.properties.activation_type
-    arr_out = activate(model, arr_out);
 
+    if(layer_index == indexed_layers.length-1){
+        
+        arr_out = activate(model, arr_out, true);
+
+    }
+    else{
+        arr_out = activate(model, arr_out);
+    }
+    
     indexed_layers[layer_index]["output"] = arr_out;
 }
 
+function bwd_pass(model, layer_index){
 
+}
 
-function activate(model, arr_in){
+function activate(model, arr_in, o_layer=false){
+    if(o_layer == true){
+        const acitvation_func = activation_map[model.properties.output_layer_info.activation];
+        return acitvation_func(arr_in);
+    }
     const acitvation_func = activation_map[model.properties.activation_type];
     return acitvation_func(arr_in);
 }
@@ -174,15 +185,22 @@ function build_matrices(model){
     const indexed_layers = Object.values(model.layers);
 
     //matrix builder, does not yet contain columns or weights ie: layers["hidden_layer_1"] = [[][][][][]] if hidden layer size was 5
-    for(let i=1; i<indexed_layers.length; i++){
+    for(let i=1; i<indexed_layers.length-1; i++){
         for(let r = 0; r<model.properties.hidden_layer_info["init_size"];r++){
-            //add empty rows to main layer's weights & biases
+            //add empty rows to hidden layer's main weights
             indexed_layers[i]["main"]["weights"].push([]);
 
-            //add empty rows to delta version of the layer's weights & biases
+            //add empty rows to the delta version of hidden layer's weights
             indexed_layers[i]["delta"]["weights"].push([]);
         }
     }    
+    for(let r = 0; r<model.properties.output_layer_info.init_size;r++){
+            //add empty rows to output layer weights
+            indexed_layers[indexed_layers.length-1]["main"]["weights"].push([]);
+
+            //add empty rows to delta version of the output layer weights
+            indexed_layers[indexed_layers.length-1]["delta"]["weights"].push([]);
+    }
 }
 
 function fill_matrices(model, feature_count){
@@ -203,7 +221,6 @@ function fill_matrices(model, feature_count){
         for(let n = 0; n < indexed_layers[i]["main"]["weights"].length; n++){
             indexed_layers[i]["main"]["biases"].push(0);
         }
-
     }    
 }
 
@@ -248,7 +265,11 @@ function reluAcivation(arr){
     return arrOut
 }
 
-const activation_map = {"relu":reluAcivation}
+function noActivation(arr){
+    return arr
+}
+
+const activation_map = {"none":noActivation,"relu":reluAcivation}
 //const deriv_acitvation_map = {"relu":derivReluActivation()}
 
 export function neuralnet({
@@ -256,6 +277,7 @@ export function neuralnet({
     hidden_layer_info = {count:5, init_size:5, style:"decreasing"},
     activation_type = "relu",
     learn_rate = 0.01,
+    output_layer_info = {init_size:1, activation:"none"},
     epochs = 100}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
@@ -264,6 +286,7 @@ export function neuralnet({
             hidden_layer_info:hidden_layer_info,
             activation_type:activation_type,
             learn_rate:learn_rate,
+            output_layer_info:output_layer_info,
             epochs:epochs};
 
         const modelOut = {
