@@ -246,6 +246,8 @@ function train(model, feature_data, target_data){
 
 function iteration(model, obs_num, feature_data, target_data){
     model.layers["input_layer"]["output"] = [];
+    
+    const target_value  = target_data["TARGET"][obs_num]
 
     //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
     for(const feat_name of Object.keys(feature_data)){
@@ -256,6 +258,8 @@ function iteration(model, obs_num, feature_data, target_data){
         fwd_pass(model, i)
     }
 
+    //calculate error
+
 }
 
 function reluAcivation(arr){
@@ -265,12 +269,30 @@ function reluAcivation(arr){
     return arrOut
 }
 
+function derivReluActivation(arr){
+    let arrOut = [];
+
+    for(const val of arr){
+        if(val <= 0){
+            arrOut.push(0);
+        }
+        else{
+            arrOut.push(1);
+        }
+    }
+    return arrOut;
+}
+
 function noActivation(arr){
-    return arr
+    return arr;
+}
+
+function derivNoActivation(arr){
+    return arr.map(x => 1)
 }
 
 const activation_map = {"none":noActivation,"relu":reluAcivation}
-//const deriv_acitvation_map = {"relu":derivReluActivation()}
+const deriv_acitvation_map = {"none":derivNoActivation,"relu":derivReluActivation}
 
 export function neuralnet({
     //default parameters for neurat net initialization
