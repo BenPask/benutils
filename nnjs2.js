@@ -63,11 +63,11 @@ for(const feat_name of Object.keys(feature_selection)){
 console.log(normalized);
 
 //[[1, 2, 3],[4,5,6],[7, 8, 9]]
-const mat = [[4],[4],[4]];
+const mat = [[4,4],[5,5],[6,6]];
 
-let  arr = [[1, 1, 1]];
+let  arr = [[1,2], [1,2], [1,2]];
 
-console.log(benlib.matmult(mat,arr))
+console.log("addition test: ", benlib.matadd(mat, arr))
 
 
 
@@ -82,6 +82,8 @@ const model = benlib.neuralnet({
 model.train({"RM":normalized["RM"],"AGE":normalized["AGE"]},{"TARGET":normalized["TARGET"]});
 
 console.log(model.layers)
+
+
 
 
 
