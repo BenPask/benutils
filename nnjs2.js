@@ -78,9 +78,11 @@ const model = benlib.neuralnet({
     activation:"relu",
     learn_rate:0.001,
     output_layer_info:{init_size:1, activation:"none"},
-    epochs:1000
+    epochs:1,
+    tt_split:0.25
 });
 
 model.train({"RM":normalized["RM"],"AGE":normalized["AGE"],"TAX":normalized["TAX"],"LSTAT":normalized["LSTAT"],"CRIM":normalized["CRIM"]},{"TARGET":normalized["TARGET"]});
+model.test()
 
 console.log(model.layers);

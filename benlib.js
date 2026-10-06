@@ -12,9 +12,17 @@ export function zto_random(){
     return seed/m;
 }
 
+export function round_float(float){
+    if(float<0){
+        return -1*(((-1*float)+0.5) | 0);
+    }
+    
+    return float+0.5 | 0;
+}
+
 //-------ARRAYS & MATRICES-------
 export function array_to_matrix(array_in){
-    if(array_in.length == 0) return [];
+    if(array_in.length == 0) return [[]];
 
     let array_out = array_in;
 
@@ -440,36 +448,59 @@ function fill_matrices(model, feature_count){
 function train(model, feature_data, target_data){
     const loss_list = []
 
-    const observation_count = target_data["TARGET"].length
+
+    const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split))
+    const testing_observation_count = target_data["TARGET"].length - training_observation_count;  
     
     //# of features being used NOT including target
     const feature_count = Object.keys(feature_data).length;
     
+    const feature_training_data = {};
+    const feature_testing_data = {};
+
     //guardrail to confirm all features including target have the same number of observations
     for(const feat_name of Object.keys(feature_data)){
-        if(observation_count != feature_data[feat_name].length){
+        if(target_data["TARGET"].length != feature_data[feat_name].length){
             throw new Error("Features and targets are not all the same size!(or wrong input format, etc.)");
         }
     }
+
+    for(const feat_name of Object.keys(feature_data)){
+        //Split feature data into training and testing sets
+        feature_training_data[feat_name] = feature_data[feat_name].slice(0, training_observation_count)
+        feature_testing_data[feat_name] = feature_data[feat_name].slice(training_observation_count, target_data["TARGET"].length)
+    }
+
+    const target_training_data = {};
+    target_training_data["TARGET"] = target_data["TARGET"].slice(0, training_observation_count)
+    const target_testing_data = {};
+    target_testing_data["TARGET"] = target_data["TARGET"].slice(training_observation_count, target_data["TARGET"].length)
+
+
+    model.properties.stored_testing_data.t_feature_data = feature_testing_data
+    model.properties.stored_testing_data.t_target_data = target_testing_data
+
+    
 
     //build simple structure without columns or weights, but including rows via the neuron count(size) of each layer
     build_matrices(model);
     fill_matrices(model, feature_count)
 
     for(let e = 0; e<model.properties.epochs; e++){
+    
         let total_epoch_loss = 0;
 
         let iterations_since_interval = 0;
 
-        for(let i = 0; i<observation_count;i++){
+        for(let i = 0; i<training_observation_count;i++){
             const epoch_predictions = [];
             const epoch_targets = [];
 
-            iteration(model, i, feature_data, target_data);
+            iteration(model, i, feature_training_data, target_training_data);
 
             //CHANGE if moving away from single output neuron regression model
             epoch_predictions.push(model.layers["output_layer"]["output"][0])
-            epoch_targets.push(target_data["TARGET"][i])
+            epoch_targets.push(target_training_data["TARGET"][i])
 
             iterations_since_interval += 1;
 
@@ -488,11 +519,40 @@ function train(model, feature_data, target_data){
             update_weights_and_biases(model)
             reset_deltas(model)
         }
+        
     }
     console.log(loss_list)
 }
 
-function iteration(model, obs_num, feature_data, target_data){
+function test(model){
+
+    console.log(model)
+    const feature_testing_data = model.properties.stored_testing_data.t_feature_data;
+    const target_testing_data = model.properties.stored_testing_data.t_target_data;
+
+    const testing_observation_count = target_testing_data["TARGET"].length
+
+    let total_test_loss = 0;
+
+    for(let i = 0; i<testing_observation_count;i++){
+        const test_predictions = [];
+        const test_targets = [];
+
+        iteration(model, i, feature_testing_data, target_testing_data, false);
+
+        //CHANGE if moving away from single output neuron regression model
+        test_predictions.push(model.layers["output_layer"]["output"][0])
+        test_targets.push(target_testing_data["TARGET"][i])
+
+        total_test_loss += calculate_mse(test_predictions, test_targets);
+    }
+
+    console.log(model.properties.performance_metrics.testing)
+
+
+}
+
+function iteration(model, obs_num, feature_data, target_data, bp=true){
     model.layers["input_layer"]["output"] = [];
     
     const target_value  = target_data["TARGET"][obs_num]
@@ -505,9 +565,12 @@ function iteration(model, obs_num, feature_data, target_data){
     for(let i = 1;i < Object.keys(model.layers).length; i++){
         fwd_pass(model, i);
     }
-    for(let i = Object.keys(model.layers).length-1;i >= 1; i--){
-        bwd_pass(model, i, target_value);
+    if(bp==true){
+        for(let i = Object.keys(model.layers).length-1;i >= 1; i--){
+            bwd_pass(model, i, target_value);
+        }
     }
+    
 }
 
 function reluAcivation(arr){
@@ -549,7 +612,10 @@ export function neuralnet({
     learn_rate = 0.01,
     output_layer_info = {init_size:1, activation:"none"},
     epochs = 100,
-    batch_size = 10}={}) {
+    batch_size = 10,
+    tt_split = 0.25,
+    stored_testing_data = {t_feature_data:null, t_target_data:null},
+    performance_metrics = {training:{loss_list:null},testing:{loss:null, rmse:null, r2:null, rmae:null}}}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
 
@@ -559,13 +625,20 @@ export function neuralnet({
             learn_rate:learn_rate,
             output_layer_info:output_layer_info,
             epochs:epochs,
-            batch_size:batch_size};
+            batch_size:batch_size,
+            tt_split:tt_split,
+
+            stored_testing_data:stored_testing_data,
+            performance_metrics:performance_metrics};
 
         const modelOut = {
             layers:{},
             properties:model_properties, 
             train(feature_data, target_data){
                 train(this, feature_data, target_data)
+            },
+            test(){
+                test(this)
             }};
         
         return modelOut;
