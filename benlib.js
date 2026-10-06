@@ -1,4 +1,4 @@
-//-------RANDOM-------
+//-------MATH-------
 let seed = 23536;
 
 export function zto_random(){
@@ -18,6 +18,35 @@ export function round_float(float){
     }
     
     return float+0.5 | 0;
+}
+
+export function absolute_value(value){
+    if(value<0){
+        return value * -1
+    }
+    return value
+}
+
+export function sqroot(value, tolerance=1e-15){
+    if(value<0){
+        throw new Error("Cannot take the square root of negative numbers")
+    }
+    if(value == 0){
+        return 0
+    }
+
+    let guess = value/2
+    
+
+    while(true){
+        let next_guess = 0.5*(guess + value/guess)
+
+        if(absolute_value(guess - next_guess) < tolerance){
+            return next_guess
+        }
+
+        guess = next_guess
+    }
 }
 
 //-------ARRAYS & MATRICES-------
@@ -151,7 +180,19 @@ export function normalize_array(arr, max_in, min_in){
         const normalized_value = (value-min_in)/(max_in-min_in);
         normalized_arr.push(normalized_value);
     }
+
     return normalized_arr;
+}
+
+export function denormalize_array(arr, max_in, min_in){
+    const denormalized_arr = []
+
+    for(const value of arr){
+        const denormalized_value = (value*(max_in-min_in))+min_in;
+        denormalized_arr.push(denormalized_value);
+    }
+
+    return denormalized_arr;
 }
 
 //-------NEURAL_NETWORK-------
@@ -165,6 +206,52 @@ function generate_weight(){
 
     return weightOut;
 }
+
+export function set_features(model, csvData, feature_selection){
+    csvData = csvData.trim().split('\n').map(row=>row.split(','));
+
+    const maxMins = model.properties.feature_data.maxMins
+    const features = model.properties.features
+
+    for(const feat_name of Object.keys(feature_selection)){
+        features[feat_name] = []
+    }
+
+    //Initialize map of feature maximum and minimum values
+    for(const feat_name of Object.keys(feature_selection)){
+        const first_val = parseFloat(csvData[0][feature_selection[feat_name]]);
+
+        maxMins[feat_name] = {"max":first_val,"min":first_val};
+    } 
+
+    for(const row of csvData){
+        for(const feat_name of Object.keys(feature_selection)){
+
+            const value = parseFloat(row[feature_selection[feat_name]]);
+
+            
+            features[feat_name].push(value);
+
+            if(value>maxMins[feat_name]["max"]) maxMins[feat_name]["max"] = value;
+            if(value<maxMins[feat_name]["min"]) maxMins[feat_name]["min"] = value;
+        }
+    }
+}
+
+export function normalize_features(model){
+    const features = model.properties.features
+
+    for(const feat_name of Object.keys(features)){
+        normalize_feature(model, feat_name);
+}
+}
+
+export function normalize_feature(model, feat_name){
+    const maxMins = model.properties.feature_data.maxMins
+    const features = model.properties.features
+        //Create a key for this feature in normalized_features and assign the normalized values to it
+        features[feat_name] = normalize_array(features[feat_name], maxMins[feat_name]["max"], maxMins[feat_name]["min"]);
+    };
 
 function fwd_pass(model, layer_index){
     const indexed_layers = Object.values(model.layers);
@@ -208,6 +295,44 @@ function calculate_mse(predictions, targets){
     
     return total_error/predictions.length;
 }
+
+function calculate_rmse(model, predictions, targets){
+    const prediction_count = predictions.length
+
+    let total_residuals = 0;
+    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"]
+    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"]
+
+    predictions = denormalize_array(predictions, targets_og_max, targets_og_min);
+    targets = denormalize_array(targets, targets_og_max, targets_og_min);
+
+    for(let i = 0; i < prediction_count; i++){
+        let residual = (targets[i]-predictions[i])*(targets[i]-predictions[i])
+        total_residuals += residual
+    }
+
+    return(sqroot(total_residuals/prediction_count))
+}
+
+function calculate_mae(model, predictions, targets){
+    const prediction_count = predictions.length
+
+    let total_error = 0;
+
+    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"]
+    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"]
+
+    predictions = denormalize_array(predictions, targets_og_max, targets_og_min);
+    targets = denormalize_array(targets, targets_og_max, targets_og_min);
+
+    for(let i = 0; i < prediction_count; i++){
+        let error = absolute_value(targets[i]-predictions[i])
+        total_error += error
+    }
+
+    return total_error/prediction_count
+}
+
 
 function calculate_loss_gradient(model, target_value, layer_index){
     const indexed_layers = Object.values(model.layers);
@@ -445,10 +570,35 @@ function fill_matrices(model, feature_count){
     }    
 }
 
-function train(model, feature_data, target_data){
+function iteration(model, obs_num, feature_data, target_data, bp=true){
+    model.layers["input_layer"]["output"] = [];
+    
+    const target_value  = target_data["TARGET"][obs_num]
+
+    //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
+    for(const feat_name of Object.keys(feature_data)){
+        model.layers["input_layer"]["output"].push(feature_data[feat_name][obs_num]);
+    };
+
+    for(let i = 1;i < Object.keys(model.layers).length; i++){
+        fwd_pass(model, i);
+    }
+    if(bp==true){
+        for(let i = Object.keys(model.layers).length-1;i >= 1; i--){
+            bwd_pass(model, i, target_value);
+        }
+    }
+    
+}
+
+function train(model){
     const loss_list = []
 
-
+    const target_data = {}
+ 
+    const feature_data = model.properties.features
+    target_data["TARGET"] = model.properties.features.TARGET
+    
     const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split))
     const testing_observation_count = target_data["TARGET"].length - training_observation_count;  
     
@@ -512,7 +662,7 @@ function train(model, feature_data, target_data){
             }
             total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets)
         }
-        loss_list.push(total_epoch_loss/model.properties.epochs)
+        loss_list.push(total_epoch_loss/training_observation_count)
 
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval)
@@ -521,7 +671,7 @@ function train(model, feature_data, target_data){
         }
         
     }
-    console.log(loss_list)
+    model.properties.performance_metrics.loss_list = loss_list;
 }
 
 function test(model){
@@ -533,44 +683,28 @@ function test(model){
     const testing_observation_count = target_testing_data["TARGET"].length
 
     let total_test_loss = 0;
-
-    for(let i = 0; i<testing_observation_count;i++){
         const test_predictions = [];
         const test_targets = [];
+
+    for(let i = 0; i<testing_observation_count;i++){
+        
 
         iteration(model, i, feature_testing_data, target_testing_data, false);
 
         //CHANGE if moving away from single output neuron regression model
         test_predictions.push(model.layers["output_layer"]["output"][0])
         test_targets.push(target_testing_data["TARGET"][i])
-
-        total_test_loss += calculate_mse(test_predictions, test_targets);
     }
-
-    console.log(model.properties.performance_metrics.testing)
-
-
-}
-
-function iteration(model, obs_num, feature_data, target_data, bp=true){
-    model.layers["input_layer"]["output"] = [];
+    total_test_loss = calculate_mse(test_predictions, test_targets);
     
-    const target_value  = target_data["TARGET"][obs_num]
+    const metrics = model.properties.performance_metrics.testing;
 
-    //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
-    for(const feat_name of Object.keys(feature_data)){
-        model.layers["input_layer"]["output"].push(feature_data[feat_name][obs_num]);
-    };
+    metrics.loss = total_test_loss;
+    metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
+    metrics.mae = calculate_mae(model, test_predictions, test_targets);
+    console.log(model.properties.performance_metrics);
 
-    for(let i = 1;i < Object.keys(model.layers).length; i++){
-        fwd_pass(model, i);
-    }
-    if(bp==true){
-        for(let i = Object.keys(model.layers).length-1;i >= 1; i--){
-            bwd_pass(model, i, target_value);
-        }
-    }
-    
+
 }
 
 function reluAcivation(arr){
@@ -614,8 +748,11 @@ export function neuralnet({
     epochs = 100,
     batch_size = 10,
     tt_split = 0.25,
+    features = {},
+    feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
-    performance_metrics = {training:{loss_list:null},testing:{loss:null, rmse:null, r2:null, rmae:null}}}={}) {
+    performance_metrics = {training:{loss_list:null},testing:{loss:null, rmse:null, r2:null, mae:null}},
+    normalization_statistics = {}}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
 
@@ -627,9 +764,12 @@ export function neuralnet({
             epochs:epochs,
             batch_size:batch_size,
             tt_split:tt_split,
+            features:features,
+            feature_data:feature_data,
 
             stored_testing_data:stored_testing_data,
-            performance_metrics:performance_metrics};
+            performance_metrics:performance_metrics,
+            normalization_statistics:normalization_statistics};
 
         const modelOut = {
             layers:{},
@@ -639,6 +779,9 @@ export function neuralnet({
             },
             test(){
                 test(this)
+            },
+            set_features(){
+                set_features(this)
             }};
         
         return modelOut;
