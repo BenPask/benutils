@@ -14,6 +14,8 @@ export function zto_random(){
 
 //-------ARRAYS & MATRICES-------
 export function array_to_matrix(array_in){
+    if(array_in.length == 0) return [];
+
     let array_out = array_in;
 
     //dealing with 1d array cases
@@ -38,9 +40,6 @@ export function transpose_matrix(m){
     let output = [];
 
     if(!Array.isArray(m[0])){
-        if(m.length==1){
-            return m
-        }
         return m.map(x => [x])
     }
     //var for # of rows
@@ -59,10 +58,6 @@ export function transpose_matrix(m){
         output.push(cur_row_out);
     }
 
-    //return to 1-d if only 1 row
-    if(output.length == 1){
-        output = output[0]
-    }
     
     return output;
 }
@@ -104,9 +99,7 @@ export function matmult(m1, m2){
         }
     }
     
-    if(product.length == 1){
-        product = product[0]
-    }
+    
     return product;
 }
 
@@ -125,11 +118,20 @@ export function matadd(matrix1, matrix2){
         }
     }
 
-    //reverse 2d format if result contains only 1 row
-    if(matrix_out.length == 1){
-        matrix_out = matrix_out[0];
+    return matrix_out;
+}
+
+export function matsub(matrix1, matrix2){
+    matrix1 = array_to_matrix(matrix1)
+    matrix2 = array_to_matrix(matrix2)
+
+    const negative_matrix2 = [];
+
+    for(const array of matrix2){
+        negative_matrix2.push(array.map(x => x*(-1)));
     }
 
+    const matrix_out = matadd(matrix1, negative_matrix2);
     return matrix_out;
 }
 
@@ -172,18 +174,15 @@ function fwd_pass(model, layer_index){
     
     let arr_out = [];
     
-    for(let i = 0;i<multiplied_output.length;i++){
-        arr_out.push(multiplied_output[i]+bias_arr[i]);
+    for(let i = 0;i<multiplied_output[0].length;i++){
+        arr_out.push(multiplied_output[0][i]+bias_arr[i]);
     }
     
     indexed_layers[layer_index]["preactivation"] = arr_out;
 
     //dynamic activation function based on model.properties.activation_type
-
     if(layer_index == indexed_layers.length-1){
-        
         arr_out = activate(model, arr_out, true);
-
     }
     else{
         arr_out = activate(model, arr_out);
@@ -218,7 +217,7 @@ function calculate_loss_gradient(model, target_value, layer_index){
 
     loss_gradient = transpose_matrix(loss_gradient);
 
-    return loss_gradient;
+    return loss_gradient[0];
 }
 
 function calculate_derivative_array(model, layer_index){
@@ -245,35 +244,112 @@ function bwd_pass(model, layer_index, target_value){
     const indexed_layers = Object.values(model.layers);
 
     const loss_gradient = calculate_loss_gradient(model, target_value, layer_index);
-    console.log("loss gradient: ", loss_gradient);
+
 
     const derivative_array = calculate_derivative_array(model, layer_index);
-    console.log("derivative array: ", derivative_array);
+  
 
     const layer_delta = arrmult(loss_gradient, derivative_array);
     indexed_layers[layer_index]["delta"]["layer_delta"] = layer_delta;
 
-
-    console.log("layer delta: ", layer_delta);
-
     const previous_layer_output = indexed_layers[layer_index-1]["output"];
-    console.log("previous_layer_output: ",previous_layer_output);
+    
 
     const delta_col = transpose_matrix(layer_delta);
 
     const delta_weight_gradient = matmult(delta_col, previous_layer_output);
 
-    console.log("delta weight gradient: ",delta_weight_gradient);
-    console.log("layer weights: ",indexed_layers[layer_index]["main"]["weights"]);
-    console.log("target: ", target_value);
+    
 
     const current_delta_gradient = indexed_layers[layer_index]["delta"]["weights"];
+    const current_bias_array = indexed_layers[layer_index]["delta"]["biases"]
 
-    indexed_layers[layer_index]["delta"]["weights"] = matadd(current_delta_gradient, delta_weight_gradient);
     
-    console.log("new delta matrix", indexed_layers[layer_index]["delta"]["weights"]);
+    indexed_layers[layer_index]["delta"]["weights"] = matadd(current_delta_gradient, delta_weight_gradient);
+    for(let i = 0; i < layer_delta.length; i++){
+        current_bias_array[i] += layer_delta[i];
+    }
 
-    //add delta matrix to the delta 
+}
+
+function average_deltas(model, custom=0){
+
+    const learn_rate = model.properties.learn_rate;
+    
+    const indexed_layers = Object.values(model.layers);
+
+    for(let i = 1; i<indexed_layers.length; i++){
+        let current_delta_weights = indexed_layers[i]["delta"]["weights"]
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
+        let interval_divisor = model.properties.batch_size;
+
+
+        if(custom!=0){
+            interval_divisor = custom;
+        }
+        
+        let averaged_delta_weights = [];
+
+        current_delta_weights = array_to_matrix(current_delta_weights)
+        for(const array of current_delta_weights){
+            const row_out = [];
+            for(const value of array){
+                row_out.push((value/interval_divisor)*learn_rate);
+            }
+            averaged_delta_weights.push(row_out)
+        }
+
+        const averaged_delta_biases = [];
+
+        for(const value of current_delta_biases){
+            averaged_delta_biases.push((value/interval_divisor)*learn_rate);
+        }
+
+        indexed_layers[i]["delta"]["weights"] = averaged_delta_weights;
+        indexed_layers[i]["delta"]["biases"] = averaged_delta_biases;
+    }
+}
+
+function update_weights_and_biases(model){
+    const indexed_layers = Object.values(model.layers);
+
+    for(let i = 1; i<indexed_layers.length; i++){
+        const current_weights = indexed_layers[i]["main"]["weights"]
+        const current_delta_weights = indexed_layers[i]["delta"]["weights"]
+
+        const current_biases = indexed_layers[i]["main"]["biases"];
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
+
+        indexed_layers[i]["main"]["weights"] = matsub(current_weights, current_delta_weights);
+        indexed_layers[i]["main"]["biases"] = matsub(current_biases, current_delta_biases)[0];        
+    }
+}
+
+function reset_deltas(model){
+    const indexed_layers = Object.values(model.layers);
+
+
+    for(let i = 1; i<indexed_layers.length; i++){
+        const reset_delta_weights = [];
+        const reset_delta_biases = [];
+
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
+        const current_delta_weights = indexed_layers[i]["delta"]["weights"]
+
+        for(const array of current_delta_weights){
+            const row_out = [];
+            for(const value of array){
+                row_out.push(0);
+            }
+            reset_delta_weights.push(row_out)
+        }
+
+        for(const value of current_delta_biases){
+            reset_delta_biases.push(0);
+        }
+        indexed_layers[i]["delta"]["weights"] = reset_delta_weights;
+        indexed_layers[i]["delta"]["biases"] = reset_delta_biases; 
+    }
 }
 
 function activate(model, arr_in, o_layer=false){
@@ -353,6 +429,7 @@ function fill_matrices(model, feature_count){
 
 function train(model, feature_data, target_data){
     const observation_count = target_data["TARGET"].length
+    
     //# of features being used NOT including target
     const feature_count = Object.keys(feature_data).length;
     
@@ -363,14 +440,30 @@ function train(model, feature_data, target_data){
         }
     }
 
-
-
     //build simple structure without columns or weights, but including rows via the neuron count(size) of each layer
     build_matrices(model);
     fill_matrices(model, feature_count)
-    iteration(model, 0, feature_data, target_data)
 
+    for(let e = 0; e<model.properties.epochs; e++){
+        let iterations_since_interval = 0;
     
+        for(let i = 0; i<observation_count;i++){
+            iteration(model, i, feature_data, target_data);
+            iterations_since_interval += 1;
+            if(iterations_since_interval==model.properties.batch_size){
+                iterations_since_interval = 0;
+                average_deltas(model)
+                update_weights_and_biases(model)
+                reset_deltas(model)
+            }
+        }
+
+        if(iterations_since_interval>0){
+            average_deltas(model, iterations_since_interval)
+            update_weights_and_biases(model)
+            reset_deltas(model)
+        }
+    }
 }
 
 function iteration(model, obs_num, feature_data, target_data){
@@ -429,7 +522,8 @@ export function neuralnet({
     activation_type = "relu",
     learn_rate = 0.01,
     output_layer_info = {init_size:1, activation:"none"},
-    epochs = 100}={}) {
+    epochs = 100,
+    batch_size = 10}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
 
@@ -438,7 +532,8 @@ export function neuralnet({
             activation_type:activation_type,
             learn_rate:learn_rate,
             output_layer_info:output_layer_info,
-            epochs:epochs};
+            epochs:epochs,
+            batch_size:batch_size};
 
         const modelOut = {
             layers:{},
@@ -449,5 +544,3 @@ export function neuralnet({
         
         return modelOut;
     }
-
-

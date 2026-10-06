@@ -67,7 +67,7 @@ const mat = [[4,4],[5,5],[6,6]];
 
 let  arr = [[1,2], [1,2], [1,2]];
 
-console.log("addition test: ", benlib.matadd(mat, arr))
+console.log("subtraction test: ", benlib.matsub(mat, arr))
 
 
 
