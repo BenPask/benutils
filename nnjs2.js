@@ -10,7 +10,9 @@ const feature_selection = {
     //put features below
     "RM":5,
     "AGE":6,
-    "TAX":9
+    "TAX":9,
+    "LSTAT":12,
+    "CRIM":0
 }
 
 //will store all data as: features{"AGE":[424,1313,1313,134], "TAX":[7546,234234,2342,231]}
@@ -79,14 +81,6 @@ const model = benlib.neuralnet({
     epochs:1000
 });
 
-model.train({"RM":normalized["RM"],"AGE":normalized["AGE"]},{"TARGET":normalized["TARGET"]});
+model.train({"RM":normalized["RM"],"AGE":normalized["AGE"],"TAX":normalized["TAX"],"LSTAT":normalized["LSTAT"],"CRIM":normalized["CRIM"]},{"TARGET":normalized["TARGET"]});
 
-console.log(model.layers)
-
-
-
-
-
-
-
-
+console.log(model.layers);

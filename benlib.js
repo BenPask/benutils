@@ -167,7 +167,6 @@ function fwd_pass(model, layer_index){
 
     const t_prev_layer_output = transpose_matrix(prev_layer_output);
 
-    
     const pre_t_multiplied_output = matmult(weight_matrix, t_prev_layer_output);
     
     const multiplied_output = transpose_matrix(pre_t_multiplied_output);
@@ -189,6 +188,17 @@ function fwd_pass(model, layer_index){
     }
     
     indexed_layers[layer_index]["output"] = arr_out;
+}
+
+function calculate_mse(predictions, targets){
+    let total_error = 0;
+
+    for(let i = 0; i < predictions.length; i++){
+        let error = targets[i] - predictions[i];
+        total_error += error*error;
+    }
+    
+    return total_error/predictions.length;
 }
 
 function calculate_loss_gradient(model, target_value, layer_index){
@@ -428,6 +438,8 @@ function fill_matrices(model, feature_count){
 }
 
 function train(model, feature_data, target_data){
+    const loss_list = []
+
     const observation_count = target_data["TARGET"].length
     
     //# of features being used NOT including target
@@ -445,18 +457,31 @@ function train(model, feature_data, target_data){
     fill_matrices(model, feature_count)
 
     for(let e = 0; e<model.properties.epochs; e++){
+        let total_epoch_loss = 0;
+
         let iterations_since_interval = 0;
-    
+
         for(let i = 0; i<observation_count;i++){
+            const epoch_predictions = [];
+            const epoch_targets = [];
+
             iteration(model, i, feature_data, target_data);
+
+            //CHANGE if moving away from single output neuron regression model
+            epoch_predictions.push(model.layers["output_layer"]["output"][0])
+            epoch_targets.push(target_data["TARGET"][i])
+
             iterations_since_interval += 1;
+
             if(iterations_since_interval==model.properties.batch_size){
                 iterations_since_interval = 0;
                 average_deltas(model)
                 update_weights_and_biases(model)
                 reset_deltas(model)
             }
+            total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets)
         }
+        loss_list.push(total_epoch_loss/model.properties.epochs)
 
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval)
@@ -464,6 +489,7 @@ function train(model, feature_data, target_data){
             reset_deltas(model)
         }
     }
+    console.log(loss_list)
 }
 
 function iteration(model, obs_num, feature_data, target_data){
