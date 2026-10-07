@@ -2,7 +2,6 @@
 let seed = 23536;
 const euler = 2.718281828459045;
 
-
 export function zto_random(){
     const a = 49234
     const m = 1000000007 //large prime number
@@ -760,11 +759,9 @@ function test(model){
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
     metrics.r2 = calculate_rsquared(model, test_predictions, test_targets);
     console.log(model.properties.performance_metrics);
-
-
 }
 
-function reluAcivation(arr){
+function reluActivation(arr){
     let arrOut = [];
     arrOut = arr.map(x => x > 0 ? x : 0);
 
@@ -785,8 +782,32 @@ function deriv_relu_activation(arr){
     return arrOut;
 }
 
+function leaky_relu_activation(arr){
+    const leaky_constant = 0.01
+    let arrOut = [];
+
+    arrOut = arr.map(x => x > 0 ? x : x*leaky_constant);
+
+    return arrOut
+}
+
+function deriv_leaky_relu_activation(arr){
+    const leaky_constant = 0.01
+    let arrOut = [];
+
+    for(const val of arr){
+        if(val <= 0){
+            arrOut.push(leaky_constant);
+        }
+        else{
+            arrOut.push(1);
+        }
+    }
+    return arrOut;
+}
+
 function sigmoid_activation(arr){
-    arrOut = [];
+    let arrOut = [];
 
     for(const val of arr){
         arrOut.push(xpo(euler, val)/(xpo(euler, val)+1))
@@ -796,10 +817,34 @@ function sigmoid_activation(arr){
 }
 
 function deriv_sigmoid_activation(arr){
-    arrOut = [];
+    let arrOut = [];
 
     for(const val of arr){
-        arrOut.push(xpo(euler, val*-1)/xpo((xpo(euler, val*-1)+1)), 2)
+        arrOut.push(xpo(euler, val*-1)/xpo((xpo(euler, val*-1)+1), 2))
+    }
+
+    return arrOut
+}
+
+function tanh_activation(arr){
+    let arrOut = [];
+   
+    for(const val of arr){
+        const numerator = (xpo(euler, val)-xpo(euler, val*-1));
+        const denominator = (xpo(euler, val)+xpo(euler, -1*val))
+        arrOut.push(numerator/denominator);
+    }
+
+    return arrOut
+}
+
+function deriv_tanh_activation(arr){
+    let arrOut = [];
+   
+    for(const val of arr){
+        const numerator = (xpo(euler, val)-xpo(euler, val*-1));
+        const denominator = (xpo(euler, val)+xpo(euler, -1*val))
+        arrOut.push(1-xpo((numerator/denominator), 2));
     }
 
     return arrOut
@@ -813,8 +858,8 @@ function deriv_no_activation(arr){
     return arr.map(x => 1)
 }
 
-const activation_map = {"none":no_activation,"relu":reluAcivation,"sigmoid":sigmoid_activation}
-const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation}
+const activation_map = {"none":no_activation,"relu":reluActivation,"sigmoid":sigmoid_activation,"tanh":tanh_activation,"leaky_relu":leaky_relu_activation}
+const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation,"tanh":deriv_tanh_activation,"leaky":deriv_leaky_relu_activation}
 
 export function neuralnet({
     //default parameters for neurat net initialization
