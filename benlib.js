@@ -1,5 +1,7 @@
 //-------MATH-------
 let seed = 23536;
+const euler = 2.718281828459045;
+
 
 export function zto_random(){
     const a = 49234
@@ -10,6 +12,25 @@ export function zto_random(){
 
     //turn it into a number between 0 and 1
     return seed/m;
+}
+
+export function xpo(value, power){
+    let effective_power = power;
+
+    if(power<0){
+        effective_power = power * -1;
+    }
+    
+    let current = value;
+    for(let i = 0; i<effective_power-1; i++){
+        current = current*value;
+    }
+    
+    if(power<0){
+        current = 1/current;
+    }
+    
+    return current;
 }
 
 export function round_float(float){
@@ -614,9 +635,13 @@ function iteration(model, obs_num, feature_data, target_data, bp=true){
 }
 
 function train(model){
-    const loss_list = []
+    const loss_list = [];
+    const rmse_list = model.properties.performance_metrics.training.rmse_list;
+    const mae_list = model.properties.performance_metrics.training.mae_list;
 
-    const target_data = {}
+    console.log(mae_list)
+
+    const target_data = {};
  
     const feature_data = model.properties.features
     target_data["TARGET"] = model.properties.features.TARGET
@@ -664,10 +689,11 @@ function train(model){
 
         let iterations_since_interval = 0;
 
-        for(let i = 0; i<training_observation_count;i++){
-            const epoch_predictions = [];
-            const epoch_targets = [];
+        const epoch_predictions = [];
+        const epoch_targets = [];
 
+        for(let i = 0; i<training_observation_count;i++){
+            
             iteration(model, i, feature_training_data, target_training_data);
 
             //CHANGE if moving away from single output neuron regression model
@@ -683,8 +709,16 @@ function train(model){
                 reset_deltas(model)
             }
             total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets)
+
+            
         }
-        loss_list.push(total_epoch_loss/training_observation_count)
+
+        if(iterations_since_interval%model.properties.metric_report_interval==0){
+            rmse_list.push(calculate_rmse(model, epoch_predictions, epoch_targets));
+            mae_list.push(calculate_mae(model, epoch_predictions, epoch_targets));
+        }
+
+        loss_list.push(total_epoch_loss/training_observation_count);
 
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval)
@@ -693,7 +727,7 @@ function train(model){
         }
         
     }
-    model.properties.performance_metrics.loss_list = loss_list;
+    model.properties.performance_metrics.training.loss_list = loss_list;
 }
 
 function test(model){
@@ -737,7 +771,7 @@ function reluAcivation(arr){
     return arrOut
 }
 
-function derivReluActivation(arr){
+function deriv_relu_activation(arr){
     let arrOut = [];
 
     for(const val of arr){
@@ -751,16 +785,36 @@ function derivReluActivation(arr){
     return arrOut;
 }
 
-function noActivation(arr){
+function sigmoid_activation(arr){
+    arrOut = [];
+
+    for(const val of arr){
+        arrOut.push(xpo(euler, val)/(xpo(euler, val)+1))
+    }
+
+    return arrOut
+}
+
+function deriv_sigmoid_activation(arr){
+    arrOut = [];
+
+    for(const val of arr){
+        arrOut.push(xpo(euler, val*-1)/xpo((xpo(euler, val*-1)+1)), 2)
+    }
+
+    return arrOut
+}
+
+function no_activation(arr){
     return arr;
 }
 
-function derivNoActivation(arr){
+function deriv_no_activation(arr){
     return arr.map(x => 1)
 }
 
-const activation_map = {"none":noActivation,"relu":reluAcivation}
-const deriv_acitvation_map = {"none":derivNoActivation,"relu":derivReluActivation}
+const activation_map = {"none":no_activation,"relu":reluAcivation,"sigmoid":sigmoid_activation}
+const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation}
 
 export function neuralnet({
     //default parameters for neurat net initialization
@@ -774,8 +828,9 @@ export function neuralnet({
     features = {},
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
-    performance_metrics = {training:{loss_list:null},testing:{loss:null, rmse:null, r2:null, mae:null}},
-    normalization_statistics = {}}={}) {
+    performance_metrics = {training:{loss_list:null, rmse_list:[], mae_list:[]},testing:{loss:null, rmse:null, r2:null, mae:null}},
+    normalization_statistics = {},
+    metric_report_interval = 10}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
 
@@ -789,6 +844,7 @@ export function neuralnet({
             tt_split:tt_split,
             features:features,
             feature_data:feature_data,
+            metric_report_interval:metric_report_interval,
 
             stored_testing_data:stored_testing_data,
             performance_metrics:performance_metrics,

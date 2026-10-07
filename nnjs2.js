@@ -26,14 +26,14 @@ const mat = [[4,4],[5,5],[6,6]];
 
 let  arr = [[1,2], [1,2], [1,2]];
 
-console.log("root test: ", benlib.sqroot(157));
+console.log("xpo test: ", benlib.xpo(2, -4));
 
 const model = benlib.neuralnet({
     hidden_layer_info: {count:5, init_size:5, style:"increasing"},
-    activation:"relu",
+    activation:"sigmoid",
     learn_rate:0.001,
     output_layer_info:{init_size:1, activation:"none"},
-    epochs:10000,
+    epochs:1000,
     tt_split:0.25
 });
 
