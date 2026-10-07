@@ -33,7 +33,7 @@ const model = benlib.neuralnet({
     activation:"relu",
     learn_rate:0.001,
     output_layer_info:{init_size:1, activation:"none"},
-    epochs:1000,
+    epochs:10000,
     tt_split:0.25
 });
 

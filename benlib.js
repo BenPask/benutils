@@ -63,13 +63,20 @@ export function array_to_matrix(array_in){
     return array_out;
 }
 
+export function array_mean(array_in){
+    let total = 0;
+    for(const value of array_in){
+        total += value;
+    }
+    return total/array_in.length;
+}
+
 export function arrmult(array1, array2){
     let array_out = [];
     for(let i = 0; i<array1.length; i++){
         array_out.push(array1[i]*array2[i]);
     }
     return array_out;
-
 }
 
 export function transpose_matrix(m){
@@ -333,6 +340,21 @@ function calculate_mae(model, predictions, targets){
     return total_error/prediction_count
 }
 
+function calculate_rsquared(model, predictions, targets){
+    const prediction_count = predictions.length
+
+    let sum_residuals = 0;
+    let sum_squares = 0;
+
+    const target_mean = array_mean(targets)
+
+    for(let i = 0; i < prediction_count; i++){
+        sum_residuals += (targets[i]-predictions[i])*(targets[i]-predictions[i]);
+        sum_squares += (targets[i]-target_mean)*(targets[i]-target_mean);
+    }
+
+    return 1-(sum_residuals/sum_squares)
+}
 
 function calculate_loss_gradient(model, target_value, layer_index){
     const indexed_layers = Object.values(model.layers);
@@ -702,6 +724,7 @@ function test(model){
     metrics.loss = total_test_loss;
     metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
+    metrics.r2 = calculate_rsquared(model, test_predictions, test_targets);
     console.log(model.properties.performance_metrics);
 
 
