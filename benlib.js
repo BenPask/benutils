@@ -57,8 +57,8 @@ export function sqroot(value, tolerance=1e-15){
 
     let guess = value/2
     
-
-    while(true){
+    let iter = 0
+    while(iter < 1000){
         let next_guess = 0.5*(guess + value/guess)
 
         if(absolute_value(guess - next_guess) < tolerance){
@@ -66,6 +66,34 @@ export function sqroot(value, tolerance=1e-15){
         }
 
         guess = next_guess
+        iter += 1;
+    }
+    return guess;
+}
+
+export function closest_pow_of_two(val){
+
+    if(typeof val != 'number'){
+        throw new Error("non-number attempted to pass through closeset_pow_of_two");
+    }
+
+    let current = null;
+    let prev_current = 2;
+
+    while(true){
+        current = prev_current*2;
+
+        if(current>val){
+            break;
+        }
+        prev_current = current;
+    }
+
+    if(absolute_value(val-prev_current)>absolute_value(val-current)){
+        return current;
+    }
+    else{
+        return prev_current;
     }
 }
 
@@ -276,8 +304,8 @@ export function normalize_features(model){
 export function normalize_feature(model, feat_name){
     const maxMins = model.properties.feature_data.maxMins
     const features = model.properties.features
-        //Create a key for this feature in normalized_features and assign the normalized values to it
-        features[feat_name] = normalize_array(features[feat_name], maxMins[feat_name]["max"], maxMins[feat_name]["min"]);
+    //Create a key for this feature in normalized_features and assign the normalized values to it
+    features[feat_name] = normalize_array(features[feat_name], maxMins[feat_name]["max"], maxMins[feat_name]["min"]);
     };
 
 function fwd_pass(model, layer_index){
@@ -555,6 +583,45 @@ function deriv_activate(model, arr_in, o_layer=false){
     return acitvation_func(arr_in);
 }
 
+function flat_build(model, num_of_layers){
+    let arr_out = [];
+    for(let i = 0;i<num_of_layers;i++){
+        arr_out.push(model.properties.hidden_layer_info.init_size);
+    }
+    return arr_out;
+}
+
+function power_of_two_build(model, num_of_layers){
+    let arr_out = [];
+
+    let init_value = closest_pow_of_two(model.properties.hidden_layer_info.init_size)
+    //How many incremental divisions by 2 will it take to get down to just 2 neurons
+    let max_increments = 0;
+    let temp_val = init_value;
+
+    while(temp_val > 2){
+        temp_val = temp_val/2;
+        max_increments += 1;
+    }
+
+    let layers_per_increment = round_float(num_of_layers/max_increments);
+
+    if(layers_per_increment == 0){
+        layers_per_increment = 1;
+    }
+
+    let count = 0;
+    for(let i = 0;i<num_of_layers;i++){
+        arr_out.push(init_value);
+        count+=1
+        if(count == layers_per_increment){
+            init_value = init_value/2
+            count = 0
+        }
+    }
+    return arr_out;
+}
+
 function build_matrices(model){
     //build default structure CHANGE LATER
     model.layers["input_layer"] = {"output":[]};
@@ -567,9 +634,15 @@ function build_matrices(model){
     //This next line just lets us call the layers in order via index. 0 is the input layer
     const indexed_layers = Object.values(model.layers);
 
+    const style_map = {"flat":flat_build,"po2":power_of_two_build}
+
+    const hidden_count = model.properties.hidden_layer_info.count;
+    const hidden_layer_schema = style_map[model.properties.hidden_layer_info.style](model, hidden_count)
+
     //matrix builder, does not yet contain columns or weights ie: layers["hidden_layer_1"] = [[][][][][]] if hidden layer size was 5
     for(let i=1; i<indexed_layers.length-1; i++){
-        for(let r = 0; r<model.properties.hidden_layer_info["init_size"];r++){
+        const layer_size = hidden_layer_schema[i-1];
+        for(let r = 0; r<layer_size;r++){
             //add empty rows to hidden layer's main weights
             indexed_layers[i]["main"]["weights"].push([]);
 
@@ -638,12 +711,14 @@ function train(model){
     const rmse_list = model.properties.performance_metrics.training.rmse_list;
     const mae_list = model.properties.performance_metrics.training.mae_list;
 
-    console.log(mae_list)
-
     const target_data = {};
  
-    const feature_data = model.properties.features
-    target_data["TARGET"] = model.properties.features.TARGET
+    const feature_data = model.properties.features;
+    target_data["TARGET"] = model.properties.features.TARGET;
+
+    delete feature_data["TARGET"];
+
+    
     
     const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split))
     const testing_observation_count = target_data["TARGET"].length - training_observation_count;  
@@ -731,7 +806,6 @@ function train(model){
 
 function test(model){
 
-    console.log(model)
     const feature_testing_data = model.properties.stored_testing_data.t_feature_data;
     const target_testing_data = model.properties.stored_testing_data.t_target_data;
 
@@ -758,7 +832,7 @@ function test(model){
     metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
     metrics.r2 = calculate_rsquared(model, test_predictions, test_targets);
-    console.log(model.properties.performance_metrics);
+    
 }
 
 function reluActivation(arr){
@@ -863,7 +937,7 @@ const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activ
 
 export function neuralnet({
     //default parameters for neurat net initialization
-    hidden_layer_info = {count:5, init_size:5, style:"decreasing"},
+    hidden_layer_info = {count:5, init_size:5, style:"flat"},
     activation_type = "relu",
     learn_rate = 0.01,
     output_layer_info = {init_size:1, activation:"none"},
