@@ -251,13 +251,13 @@ export function denormalize_array(arr, max_in, min_in){
 }
 
 //-------NEURAL_NETWORK-------
-function generate_weight(){
-    //b in the equation, constant variable to adjust variance of starting weights
-    const sensitivity = 1
+function generate_weight(prev_layer_size){
+    //Utilizing he weight generation to prevent explosions to infinity
+    const limit = sqroot(6/prev_layer_size)
 
     const zeroToOne = zto_random();
 
-    const weightOut = (zeroToOne*(2*sensitivity))-sensitivity;
+    const weightOut = (zeroToOne*2*limit)-limit;
 
     return weightOut;
 }
@@ -541,7 +541,6 @@ function update_weights_and_biases(model){
 function reset_deltas(model){
     const indexed_layers = Object.values(model.layers);
 
-
     for(let i = 1; i<indexed_layers.length; i++){
         const reset_delta_weights = [];
         const reset_delta_biases = [];
@@ -584,15 +583,24 @@ function deriv_activate(model, arr_in, o_layer=false){
 }
 
 function flat_build(model, num_of_layers){
-    let arr_out = [];
-    for(let i = 0;i<num_of_layers;i++){
-        arr_out.push(model.properties.hidden_layer_info.init_size);
+
+    const init_value = model.properties.hidden_layer_info.init_size;
+
+    const schema_values = []
+
+    for(let i = 0; i < num_of_layers; i++){
+        schema_values.push(0);
     }
-    return arr_out;
+    
+    for(let i = 0; i < schema_values.length; i++){
+        schema_values[i] = init_value;
+    }
+    
+
+    return schema_values;
 }
 
 function power_of_two_build(model, num_of_layers){
-    let arr_out = [];
 
     let init_value = closest_pow_of_two(model.properties.hidden_layer_info.init_size)
     //How many incremental divisions by 2 will it take to get down to just 2 neurons
@@ -604,22 +612,37 @@ function power_of_two_build(model, num_of_layers){
         max_increments += 1;
     }
 
-    let layers_per_increment = round_float(num_of_layers/max_increments);
+    let layers_per_increment = round_float((num_of_layers/max_increments)-0.5);
 
     if(layers_per_increment == 0){
         layers_per_increment = 1;
     }
 
-    let count = 0;
-    for(let i = 0;i<num_of_layers;i++){
-        arr_out.push(init_value);
-        count+=1
-        if(count == layers_per_increment){
-            init_value = init_value/2
-            count = 0
-        }
+    const schema_values = []
+    
+    for(let i = 0; i < num_of_layers; i++){
+        schema_values.push(0)
     }
-    return arr_out;
+
+    let cur_increment_count = 0;
+    
+    for(let i = 0; i < schema_values.length; i++){
+
+        cur_increment_count++;
+        
+        schema_values[i] = init_value
+
+        if(cur_increment_count>=layers_per_increment){
+            //Cut the number of neurons for the next layer in half if it will remain 2 or more
+            if(init_value/2 >= 2){
+                init_value = init_value/2;
+                cur_increment_count = 0;
+            }
+        }
+        
+    }
+
+    return schema_values
 }
 
 function build_matrices(model){
@@ -642,6 +665,7 @@ function build_matrices(model){
     //matrix builder, does not yet contain columns or weights ie: layers["hidden_layer_1"] = [[][][][][]] if hidden layer size was 5
     for(let i=1; i<indexed_layers.length-1; i++){
         const layer_size = hidden_layer_schema[i-1];
+        
         for(let r = 0; r<layer_size;r++){
             //add empty rows to hidden layer's main weights
             indexed_layers[i]["main"]["weights"].push([]);
@@ -669,7 +693,7 @@ function fill_matrices(model, feature_count){
     for(let i=1; i<indexed_layers.length; i++){
         for(const m_row of indexed_layers[i]["main"]["weights"]){
             //push a generated weight for the size of the previous layers output.
-            for(let i = 0;i<prev_layer_size;i++) m_row.push(generate_weight());
+            for(let i = 0;i<prev_layer_size;i++) m_row.push(generate_weight(prev_layer_size));
         }
         for(const m_row of indexed_layers[i]["delta"]["weights"]){
             //push a 0 for the size of the previous layers output.

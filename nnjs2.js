@@ -29,7 +29,7 @@ let  arr = [[1,2], [1,2], [1,2]];
 console.log("cpo2 test", benlib.closest_pow_of_two(2150));
 
 const model = benlib.neuralnet({
-    hidden_layer_info: {count:2, init_size:32, style:"po2"},
+    hidden_layer_info: {count:3, init_size:32, style:"flat"},
     activation_type:"relu",
     learn_rate:.01,
     output_layer_info:{init_size:1, activation:"none"},
