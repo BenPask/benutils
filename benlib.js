@@ -315,8 +315,7 @@ export function set_features_csv(model, csvData, feature_selection){
     for(let row = start_index; row < csvData.length; row++){
         for(const feat_name of Object.keys(feature_selection)){
 
-            const value = parseFloat(row[feature_selection[feat_name]]);
-
+            const value = parseFloat(csvData[row][feature_selection[feat_name]]);
             
             features[feat_name].push(value);
 
