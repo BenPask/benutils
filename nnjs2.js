@@ -26,7 +26,10 @@ const mat = [[4,4],[5,5],[6,6]];
 
 let  arr = [[1,2], [1,2], [1,2]];
 
-console.log("rounding test", benlib.round_float(.5));
+const fake_feature = {"TARGET":[23,35,562,5235,1234,5235,123,523,4234,234,2234,234,4,4,3,4,432,4324,435,234],"hi":[23,35,562,5235,1234,5235,123,523,4234,234,2234,234,4,4,3,4,432,4324,435,234]}
+
+console.log("test", benlib.shuffle_feature_data(fake_feature))
+
 
 const model = benlib.neuralnet({
     hidden_layer_info: {count:11, init_size:2, style:"hourglass", hourglass_operation:"*"},
@@ -34,10 +37,11 @@ const model = benlib.neuralnet({
     learn_rate:.01,
     output_layer_info:{init_size:1, activation:"none"},
     epochs:50,
-    tt_split:0.25
+    tt_split:0.25,
+    random_seed:58373
 });
 
-benlib.set_features(model, rawCsvData, feature_selection)
+benlib.set_features_csv(model, rawCsvData, feature_selection)
 benlib.normalize_features(model)
 
 //model.train({"RM":normalized["RM"],"AGE":normalized["AGE"],"TAX":normalized["TAX"],"LSTAT":normalized["LSTAT"],"CRIM":normalized["CRIM"]},{"TARGET":normalized["TARGET"]});

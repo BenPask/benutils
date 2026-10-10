@@ -1,16 +1,21 @@
 //-------MATH-------
-let seed = 23536;
 const euler = 2.718281828459045;
+let global_seed = 75128;
 
-export function zto_random(){
-    const a = 49234
-    const m = 1000000007 //large prime number
 
+export function zto_random(model=null){
+    const a = 49234;
+    const m = 1000000007; //large prime number
+
+    if(model!=null){
+        model.properties.current_seed = (model.properties.current_seed * a) % m;
+        return model.properties.current_seed / m;
+    }
     //calc next seed
-    seed = (seed*a)%m;
+    global_seed = (global_seed*a)%m;
 
     //turn it into a number between 0 and 1
-    return seed/m;
+    return global_seed/m;
 }
 
 export function xpo(value, power){
@@ -190,8 +195,6 @@ export function matmult(m1, m2){
             product[r_m1].push(cur_value_out);
         }
     }
-    
-    
     return product;
 }
 
@@ -251,25 +254,55 @@ export function denormalize_array(arr, max_in, min_in){
 }
 
 //-------NEURAL_NETWORK-------
-function generate_weight(prev_layer_size){
+function generate_weight(model, prev_layer_size){
     //Utilizing he weight generation to prevent explosions to infinity
-    const limit = sqroot(6/prev_layer_size)
+    const limit = sqroot(6/prev_layer_size);
 
-    const zeroToOne = zto_random();
+    const zeroToOne = zto_random(model);
 
     const weightOut = (zeroToOne*2*limit)-limit;
 
     return weightOut;
 }
 
-export function set_features(model, csvData, feature_selection){
+export function set_features(model, features_in){
+    const maxMins = model.properties.feature_data.maxMins;
+    const features = {};
+
+    for(const feat_name of Object.keys(features_in)){
+        const first_val = features_in[feat_name][0];
+
+        maxMins[feat_name] = {"max":first_val,"min":first_val};
+    }
+
+    for(const feat_name of Object.keys(features_in)){
+        for(const value of features_in[feat_name]){
+            features[feat_name].push(value);
+
+            if(value>maxMins[feat_name]["max"]) maxMins[feat_name]["max"] = value;
+            if(value<maxMins[feat_name]["min"]) maxMins[feat_name]["min"] = value;
+        }
+    }
+    features = shuffle_feature_data(features, model);
+    model.properties.features = features;
+}
+
+export function set_features_csv(model, csvData, feature_selection){
     csvData = csvData.trim().split('\n').map(row=>row.split(','));
 
+    //csv header safegaurd, default=0 or "no headers"
+    let start_index = 0;
+
     const maxMins = model.properties.feature_data.maxMins
-    const features = model.properties.features
+    let features = {};
 
     for(const feat_name of Object.keys(feature_selection)){
-        features[feat_name] = []
+        features[feat_name] = [];
+    }
+
+    //safegaurd for csv headers, just removing them because feature_selection handles labels
+    if(isNaN(parseFloat(csvData[0][feature_selection["TARGET"]]))){
+        start_index = 1;
     }
 
     //Initialize map of feature maximum and minimum values
@@ -279,7 +312,7 @@ export function set_features(model, csvData, feature_selection){
         maxMins[feat_name] = {"max":first_val,"min":first_val};
     } 
 
-    for(const row of csvData){
+    for(let row = start_index; row < csvData.length; row++){
         for(const feat_name of Object.keys(feature_selection)){
 
             const value = parseFloat(row[feature_selection[feat_name]]);
@@ -291,10 +324,13 @@ export function set_features(model, csvData, feature_selection){
             if(value<maxMins[feat_name]["min"]) maxMins[feat_name]["min"] = value;
         }
     }
+
+    features = shuffle_feature_data(features, model);
+    model.properties.features = features;
 }
 
 export function normalize_features(model){
-    const features = model.properties.features
+    const features = model.properties.features;
 
     for(const feat_name of Object.keys(features)){
         normalize_feature(model, feat_name);
@@ -302,11 +338,53 @@ export function normalize_features(model){
 }
 
 export function normalize_feature(model, feat_name){
-    const maxMins = model.properties.feature_data.maxMins
-    const features = model.properties.features
+    const maxMins = model.properties.feature_data.maxMins;
+    const features = model.properties.features;
     //Create a key for this feature in normalized_features and assign the normalized values to it
     features[feat_name] = normalize_array(features[feat_name], maxMins[feat_name]["max"], maxMins[feat_name]["min"]);
-    };
+};
+
+export function shuffle_feature_data(features_in_user, model=null){
+
+    const features_in = {}
+
+    for(const feat_name of Object.keys(features_in_user)){
+        features_in[feat_name] = {}
+    }
+
+    for(const feat_name of Object.keys(features_in_user)){
+        for(let i = 0; i < features_in_user[feat_name].length; i++){
+            features_in[feat_name][i] = features_in_user[feat_name][i]
+        }
+    }
+
+    const observation_count = Object.keys(features_in["TARGET"]).length;
+    let remaining_indexes = observation_count;
+    const features = {};
+
+    for(const feat_name of Object.keys(features_in)){
+        features[feat_name] = [];
+    }
+
+    for(let i = 0; i < observation_count; i++){
+        
+        let observation_to_transfer = round_float(((zto_random() * remaining_indexes)-0.5));
+
+        if(model!=null){
+            observation_to_transfer = round_float(((zto_random(model) * remaining_indexes)-0.5));
+        }
+        
+        for(const feat_name of Object.keys(features_in)){
+            const key = Object.keys(features_in[feat_name])[observation_to_transfer];
+
+            features[feat_name].push(features_in[feat_name][key]);
+            
+            delete features_in[feat_name][key];
+        }
+        remaining_indexes = Object.keys(features_in["TARGET"]).length;
+    }
+    return features;
+}
 
 function fwd_pass(model, layer_index){
     const indexed_layers = Object.values(model.layers);
@@ -352,56 +430,56 @@ function calculate_mse(predictions, targets){
 }
 
 function calculate_rmse(model, predictions, targets){
-    const prediction_count = predictions.length
+    const prediction_count = predictions.length;
 
     let total_residuals = 0;
-    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"]
-    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"]
+    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"];
+    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"];
 
     predictions = denormalize_array(predictions, targets_og_max, targets_og_min);
     targets = denormalize_array(targets, targets_og_max, targets_og_min);
 
     for(let i = 0; i < prediction_count; i++){
-        let residual = (targets[i]-predictions[i])*(targets[i]-predictions[i])
-        total_residuals += residual
+        let residual = (targets[i]-predictions[i])*(targets[i]-predictions[i]);
+        total_residuals += residual;
     }
 
-    return(sqroot(total_residuals/prediction_count))
+    return(sqroot(total_residuals/prediction_count));
 }
 
 function calculate_mae(model, predictions, targets){
-    const prediction_count = predictions.length
+    const prediction_count = predictions.length;
 
     let total_error = 0;
 
-    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"]
-    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"]
+    const targets_og_min = model.properties.feature_data.maxMins["TARGET"]["min"];
+    const targets_og_max = model.properties.feature_data.maxMins["TARGET"]["max"];
 
     predictions = denormalize_array(predictions, targets_og_max, targets_og_min);
     targets = denormalize_array(targets, targets_og_max, targets_og_min);
 
     for(let i = 0; i < prediction_count; i++){
-        let error = absolute_value(targets[i]-predictions[i])
-        total_error += error
+        let error = absolute_value(targets[i]-predictions[i]);
+        total_error += error;
     }
 
-    return total_error/prediction_count
+    return total_error/prediction_count;
 }
 
 function calculate_rsquared(model, predictions, targets){
-    const prediction_count = predictions.length
+    const prediction_count = predictions.length;
 
     let sum_residuals = 0;
     let sum_squares = 0;
 
-    const target_mean = array_mean(targets)
+    const target_mean = array_mean(targets);
 
     for(let i = 0; i < prediction_count; i++){
         sum_residuals += (targets[i]-predictions[i])*(targets[i]-predictions[i]);
         sum_squares += (targets[i]-target_mean)*(targets[i]-target_mean);
     }
 
-    return 1-(sum_residuals/sum_squares)
+    return 1-(sum_residuals/sum_squares);
 }
 
 function calculate_loss_gradient(model, target_value, layer_index){
@@ -424,9 +502,9 @@ function calculate_loss_gradient(model, target_value, layer_index){
 
     const transposed_next_weights = transpose_matrix(next_weights);
 
-    const transposed_next_delta = transpose_matrix(next_delta)
+    const transposed_next_delta = transpose_matrix(next_delta);
 
-    let loss_gradient = matmult(transposed_next_weights, transposed_next_delta)
+    let loss_gradient = matmult(transposed_next_weights, transposed_next_delta);
 
     loss_gradient = transpose_matrix(loss_gradient);
 
@@ -450,7 +528,7 @@ function calculate_derivative_array(model, layer_index){
 
     const derivative_array = deriv_activate(model, pre_activation_output);
 
-    return derivative_array
+    return derivative_array;
 }
 
 function bwd_pass(model, layer_index, target_value){
@@ -475,7 +553,7 @@ function bwd_pass(model, layer_index, target_value){
     
 
     const current_delta_gradient = indexed_layers[layer_index]["delta"]["weights"];
-    const current_bias_array = indexed_layers[layer_index]["delta"]["biases"]
+    const current_bias_array = indexed_layers[layer_index]["delta"]["biases"];
 
     
     indexed_layers[layer_index]["delta"]["weights"] = matadd(current_delta_gradient, delta_weight_gradient);
@@ -492,8 +570,8 @@ function average_deltas(model, custom=0){
     const indexed_layers = Object.values(model.layers);
 
     for(let i = 1; i<indexed_layers.length; i++){
-        let current_delta_weights = indexed_layers[i]["delta"]["weights"]
-        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
+        let current_delta_weights = indexed_layers[i]["delta"]["weights"];
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"];
         let interval_divisor = model.properties.batch_size;
 
 
@@ -503,13 +581,13 @@ function average_deltas(model, custom=0){
         
         let averaged_delta_weights = [];
 
-        current_delta_weights = array_to_matrix(current_delta_weights)
+        current_delta_weights = array_to_matrix(current_delta_weights);
         for(const array of current_delta_weights){
             const row_out = [];
             for(const value of array){
                 row_out.push((value/interval_divisor)*learn_rate);
             }
-            averaged_delta_weights.push(row_out)
+            averaged_delta_weights.push(row_out);
         }
 
         const averaged_delta_biases = [];
@@ -527,11 +605,11 @@ function update_weights_and_biases(model){
     const indexed_layers = Object.values(model.layers);
 
     for(let i = 1; i<indexed_layers.length; i++){
-        const current_weights = indexed_layers[i]["main"]["weights"]
-        const current_delta_weights = indexed_layers[i]["delta"]["weights"]
+        const current_weights = indexed_layers[i]["main"]["weights"];
+        const current_delta_weights = indexed_layers[i]["delta"]["weights"];
 
         const current_biases = indexed_layers[i]["main"]["biases"];
-        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"];
 
         indexed_layers[i]["main"]["weights"] = matsub(current_weights, current_delta_weights);
         indexed_layers[i]["main"]["biases"] = matsub(current_biases, current_delta_biases)[0];        
@@ -545,15 +623,15 @@ function reset_deltas(model){
         const reset_delta_weights = [];
         const reset_delta_biases = [];
 
-        const current_delta_biases = indexed_layers[i]["delta"]["biases"]
-        const current_delta_weights = indexed_layers[i]["delta"]["weights"]
+        const current_delta_biases = indexed_layers[i]["delta"]["biases"];
+        const current_delta_weights = indexed_layers[i]["delta"]["weights"];
 
         for(const array of current_delta_weights){
             const row_out = [];
             for(const value of array){
                 row_out.push(0);
             }
-            reset_delta_weights.push(row_out)
+            reset_delta_weights.push(row_out);
         }
 
         for(const value of current_delta_biases){
@@ -586,7 +664,7 @@ function flat_build(model, num_of_layers){
 
     const init_value = model.properties.hidden_layer_info.init_size;
 
-    const schema_values = []
+    const schema_values = [];
 
     for(let i = 0; i < num_of_layers; i++){
         schema_values.push(0);
@@ -602,7 +680,7 @@ function flat_build(model, num_of_layers){
 
 function power_of_two_build(model, num_of_layers){
 
-    let init_value = closest_pow_of_two(model.properties.hidden_layer_info.init_size)
+    let init_value = closest_pow_of_two(model.properties.hidden_layer_info.init_size);
     //How many incremental divisions by 2 will it take to get down to just 2 neurons
     let max_increments = 0;
     let temp_val = init_value;
@@ -639,18 +717,16 @@ function power_of_two_build(model, num_of_layers){
             }
         }
     }
-    return schema_values
+    return schema_values;
 }
 
 function hourglass_value(model, value, inverse=false){
-    let hourglass_operator = model.properties.hidden_layer_info.hourglass_operation
+    let hourglass_operator = model.properties.hidden_layer_info.hourglass_operation;
 
-
-
-    const operation_map = {"/":"*", "sqroot":"**", "*":"/", "**":"sqroot"}
+    const operation_map = {"/":"*", "sqroot":"**", "*":"/", "**":"sqroot"};
 
     if(inverse){
-        hourglass_operator = operation_map[hourglass_operator]
+        hourglass_operator = operation_map[hourglass_operator];
     }
     
     switch (hourglass_operator) {
@@ -670,7 +746,7 @@ function hourglass_value(model, value, inverse=false){
 function hourglass_build(model, num_of_layers){
     let init_value = model.properties.hidden_layer_info.init_size;
 
-    const schema_values = []
+    const schema_values = [];
 
     for(let i = 0; i < num_of_layers; i++){
         schema_values.push(0);
@@ -704,10 +780,10 @@ function build_matrices(model){
     //This next line just lets us call the layers in order via index. 0 is the input layer
     const indexed_layers = Object.values(model.layers);
 
-    const style_map = {"flat":flat_build,"po2":power_of_two_build,"hourglass":hourglass_build}
+    const style_map = {"flat":flat_build,"po2":power_of_two_build,"hourglass":hourglass_build};
 
     const hidden_count = model.properties.hidden_layer_info.count;
-    const hidden_layer_schema = style_map[model.properties.hidden_layer_info.style](model, hidden_count)
+    const hidden_layer_schema = style_map[model.properties.hidden_layer_info.style](model, hidden_count);
 
     //matrix builder, does not yet contain columns or weights ie: layers["hidden_layer_1"] = [[][][][][]] if hidden layer size was 5
     for(let i=1; i<indexed_layers.length-1; i++){
@@ -735,19 +811,19 @@ function fill_matrices(model, feature_count){
 
     //Because the amount of columns(weights) per layer are determined by the output of the previouse layer,
     //initialize the count to be the size of the INPUT layer, then adjust as you move through the layers
-    let prev_layer_size = feature_count
+    let prev_layer_size = feature_count;
 
     for(let i=1; i<indexed_layers.length; i++){
         for(const m_row of indexed_layers[i]["main"]["weights"]){
             //push a generated weight for the size of the previous layers output.
-            for(let i = 0;i<prev_layer_size;i++) m_row.push(generate_weight(prev_layer_size));
+            for(let i = 0;i<prev_layer_size;i++) m_row.push(generate_weight(model, prev_layer_size));
         }
         for(const m_row of indexed_layers[i]["delta"]["weights"]){
             //push a 0 for the size of the previous layers output.
             for(let i = 0;i<prev_layer_size;i++) m_row.push(0);
         }
         //update the previous layer size variable to be this layer before moving on
-        prev_layer_size = indexed_layers[i]["main"]["weights"].length
+        prev_layer_size = indexed_layers[i]["main"]["weights"].length;
 
         for(let n = 0; n < indexed_layers[i]["main"]["weights"].length; n++){
             indexed_layers[i]["main"]["biases"].push(0);
@@ -759,7 +835,7 @@ function fill_matrices(model, feature_count){
 function iteration(model, obs_num, feature_data, target_data, bp=true){
     model.layers["input_layer"]["output"] = [];
     
-    const target_value  = target_data["TARGET"][obs_num]
+    const target_value  = target_data["TARGET"][obs_num];
 
     //set the model.layers["input_layer"]["output"] to the values of the feature's for this observation number
     for(const feat_name of Object.keys(feature_data)){
@@ -791,7 +867,7 @@ function train(model){
 
     
     
-    const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split))
+    const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split));
     const testing_observation_count = target_data["TARGET"].length - training_observation_count;  
     
     //# of features being used NOT including target
@@ -809,24 +885,24 @@ function train(model){
 
     for(const feat_name of Object.keys(feature_data)){
         //Split feature data into training and testing sets
-        feature_training_data[feat_name] = feature_data[feat_name].slice(0, training_observation_count)
-        feature_testing_data[feat_name] = feature_data[feat_name].slice(training_observation_count, target_data["TARGET"].length)
+        feature_training_data[feat_name] = feature_data[feat_name].slice(0, training_observation_count);
+        feature_testing_data[feat_name] = feature_data[feat_name].slice(training_observation_count, target_data["TARGET"].length);
     }
 
     const target_training_data = {};
-    target_training_data["TARGET"] = target_data["TARGET"].slice(0, training_observation_count)
+    target_training_data["TARGET"] = target_data["TARGET"].slice(0, training_observation_count);
     const target_testing_data = {};
-    target_testing_data["TARGET"] = target_data["TARGET"].slice(training_observation_count, target_data["TARGET"].length)
+    target_testing_data["TARGET"] = target_data["TARGET"].slice(training_observation_count, target_data["TARGET"].length);
 
 
-    model.properties.stored_testing_data.t_feature_data = feature_testing_data
-    model.properties.stored_testing_data.t_target_data = target_testing_data
+    model.properties.stored_testing_data.t_feature_data = feature_testing_data;
+    model.properties.stored_testing_data.t_target_data = target_testing_data;
 
     
 
     //build simple structure without columns or weights, but including rows via the neuron count(size) of each layer
     build_matrices(model);
-    fill_matrices(model, feature_count)
+    fill_matrices(model, feature_count);
 
     for(let e = 0; e<model.properties.epochs; e++){
     
@@ -842,18 +918,18 @@ function train(model){
             iteration(model, i, feature_training_data, target_training_data);
 
             //CHANGE if moving away from single output neuron regression model
-            epoch_predictions.push(model.layers["output_layer"]["output"][0])
-            epoch_targets.push(target_training_data["TARGET"][i])
+            epoch_predictions.push(model.layers["output_layer"]["output"][0]);
+            epoch_targets.push(target_training_data["TARGET"][i]);
 
             iterations_since_interval += 1;
 
             if(iterations_since_interval==model.properties.batch_size){
                 iterations_since_interval = 0;
-                average_deltas(model)
-                update_weights_and_biases(model)
-                reset_deltas(model)
+                average_deltas(model);
+                update_weights_and_biases(model);
+                reset_deltas(model);
             }
-            total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets)
+            total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets);
 
             
         }
@@ -866,9 +942,9 @@ function train(model){
         loss_list.push(total_epoch_loss/training_observation_count);
 
         if(iterations_since_interval>0){
-            average_deltas(model, iterations_since_interval)
-            update_weights_and_biases(model)
-            reset_deltas(model)
+            average_deltas(model, iterations_since_interval);
+            update_weights_and_biases(model);
+            reset_deltas(model);
         }
         
     }
@@ -880,7 +956,7 @@ function test(model){
     const feature_testing_data = model.properties.stored_testing_data.t_feature_data;
     const target_testing_data = model.properties.stored_testing_data.t_target_data;
 
-    const testing_observation_count = target_testing_data["TARGET"].length
+    const testing_observation_count = target_testing_data["TARGET"].length;
 
     let total_test_loss = 0;
         const test_predictions = [];
@@ -928,12 +1004,12 @@ function deriv_relu_activation(arr){
 }
 
 function leaky_relu_activation(arr){
-    const leaky_constant = 0.01
+    const leaky_constant = 0.01;
     let arrOut = [];
 
     arrOut = arr.map(x => x > 0 ? x : x*leaky_constant);
 
-    return arrOut
+    return arrOut;
 }
 
 function deriv_leaky_relu_activation(arr){
@@ -955,20 +1031,20 @@ function sigmoid_activation(arr){
     let arrOut = [];
 
     for(const val of arr){
-        arrOut.push(xpo(euler, val)/(xpo(euler, val)+1))
+        arrOut.push(xpo(euler, val)/(xpo(euler, val)+1));
     }
 
-    return arrOut
+    return arrOut;
 }
 
 function deriv_sigmoid_activation(arr){
     let arrOut = [];
 
     for(const val of arr){
-        arrOut.push(xpo(euler, val*-1)/xpo((xpo(euler, val*-1)+1), 2))
+        arrOut.push(xpo(euler, val*-1)/xpo((xpo(euler, val*-1)+1), 2));
     }
 
-    return arrOut
+    return arrOut;
 }
 
 function tanh_activation(arr){
@@ -976,11 +1052,11 @@ function tanh_activation(arr){
    
     for(const val of arr){
         const numerator = (xpo(euler, val)-xpo(euler, val*-1));
-        const denominator = (xpo(euler, val)+xpo(euler, -1*val))
+        const denominator = (xpo(euler, val)+xpo(euler, -1*val));
         arrOut.push(numerator/denominator);
     }
 
-    return arrOut
+    return arrOut;
 }
 
 function deriv_tanh_activation(arr){
@@ -988,11 +1064,11 @@ function deriv_tanh_activation(arr){
    
     for(const val of arr){
         const numerator = (xpo(euler, val)-xpo(euler, val*-1));
-        const denominator = (xpo(euler, val)+xpo(euler, -1*val))
+        const denominator = (xpo(euler, val)+xpo(euler, -1*val));
         arrOut.push(1-xpo((numerator/denominator), 2));
     }
 
-    return arrOut
+    return arrOut;
 }
 
 function no_activation(arr){
@@ -1000,11 +1076,11 @@ function no_activation(arr){
 }
 
 function deriv_no_activation(arr){
-    return arr.map(x => 1)
+    return arr.map(x => 1);
 }
 
-const activation_map = {"none":no_activation,"relu":reluActivation,"sigmoid":sigmoid_activation,"tanh":tanh_activation,"leaky_relu":leaky_relu_activation}
-const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation,"tanh":deriv_tanh_activation,"leaky":deriv_leaky_relu_activation}
+const activation_map = {"none":no_activation,"relu":reluActivation,"sigmoid":sigmoid_activation,"tanh":tanh_activation,"leaky_relu":leaky_relu_activation};
+const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation,"tanh":deriv_tanh_activation,"leaky":deriv_leaky_relu_activation};
 
 export function neuralnet({
     //default parameters for neurat net initialization
@@ -1015,14 +1091,13 @@ export function neuralnet({
     epochs = 100,
     batch_size = 10,
     tt_split = 0.25,
+    random_seed = 58373,
     features = {},
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
     performance_metrics = {training:{loss_list:null, rmse_list:[], mae_list:[]},testing:{loss:null, rmse:null, r2:null, mae:null}},
     normalization_statistics = {},
     metric_report_interval = 10}={}) {
-
-        console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
 
         hidden_layer_info = {
             count:5, 
@@ -1032,6 +1107,14 @@ export function neuralnet({
             ...hidden_layer_info
         }
 
+        console.log(`now buidling model[SEED: ${random_seed}]
+${epochs} epochs
+${tt_split} train/test split
+${activation_type} activation
+${batch_size} batch size
+${hidden_layer_info.style} architecture, hg_oper?: ${hidden_layer_info.hourglass_operation}
+${learn_rate} learning rate`);
+
         const model_properties = {
             hidden_layer_info:hidden_layer_info,
             activation_type:activation_type,
@@ -1040,6 +1123,8 @@ export function neuralnet({
             epochs:epochs,
             batch_size:batch_size,
             tt_split:tt_split,
+            random_seed:random_seed,
+            current_seed:random_seed,
             features:features,
             feature_data:feature_data,
             metric_report_interval:metric_report_interval,
@@ -1059,6 +1144,9 @@ export function neuralnet({
             },
             set_features(){
                 set_features(this)
+            },
+            set_features_csv(){
+                set_features_csv(this)
             }};
         
         return modelOut;
