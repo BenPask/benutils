@@ -1,3 +1,5 @@
+import {zto_random, round_float} from './math.js';
+
 //-------DATA-------
 export function normalize_array(arr, max_in, min_in){
     const normalized_arr = []
