@@ -307,7 +307,7 @@ export function set_features_csv(model, csvData, feature_selection){
 
     //Initialize map of feature maximum and minimum values
     for(const feat_name of Object.keys(feature_selection)){
-        const first_val = parseFloat(csvData[0][feature_selection[feat_name]]);
+        const first_val = parseFloat(csvData[start_index][feature_selection[feat_name]]);
 
         maxMins[feat_name] = {"max":first_val,"min":first_val};
     } 
@@ -344,46 +344,34 @@ export function normalize_feature(model, feat_name){
     features[feat_name] = normalize_array(features[feat_name], maxMins[feat_name]["max"], maxMins[feat_name]["min"]);
 };
 
-export function shuffle_feature_data(features_in_user, model=null){
+export function shuffle_feature_data(features_in, model=null){
 
-    const features_in = {}
+    const feat_names = Object.keys(features_in)
 
-    for(const feat_name of Object.keys(features_in_user)){
-        features_in[feat_name] = {}
+    const observation_count = features_in[feat_names[0]].length;
+
+    const features_copy = {};
+    for(const name of feat_names){
+        features_copy[name] = [...features_in[name]];
     }
 
-    for(const feat_name of Object.keys(features_in_user)){
-        for(let i = 0; i < features_in_user[feat_name].length; i++){
-            features_in[feat_name][i] = features_in_user[feat_name][i]
+    //fisher yates shuffle
+    for(let i = observation_count - 1; i > 0; i--){
+
+        let zto_gen = zto_random();
+
+        if(model!=null) zto_gen = zto_random(model);
+
+        const j = round_float((zto_gen * (i+1))-0.5);
+
+        for(const name of feat_names){
+            const temp = features_copy[name][i];
+            features_copy[name][i] = features_copy[name][j];
+            features_copy[name][j] = temp;
         }
     }
 
-    const observation_count = Object.keys(features_in["TARGET"]).length;
-    let remaining_indexes = observation_count;
-    const features = {};
-
-    for(const feat_name of Object.keys(features_in)){
-        features[feat_name] = [];
-    }
-
-    for(let i = 0; i < observation_count; i++){
-        
-        let observation_to_transfer = round_float(((zto_random() * remaining_indexes)-0.5));
-
-        if(model!=null){
-            observation_to_transfer = round_float(((zto_random(model) * remaining_indexes)-0.5));
-        }
-        
-        for(const feat_name of Object.keys(features_in)){
-            const key = Object.keys(features_in[feat_name])[observation_to_transfer];
-
-            features[feat_name].push(features_in[feat_name][key]);
-            
-            delete features_in[feat_name][key];
-        }
-        remaining_indexes = Object.keys(features_in["TARGET"]).length;
-    }
-    return features;
+    return features_copy;
 }
 
 function fwd_pass(model, layer_index){
