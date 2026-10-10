@@ -618,10 +618,10 @@ function power_of_two_build(model, num_of_layers){
         layers_per_increment = 1;
     }
 
-    const schema_values = []
+    const schema_values = [];
     
     for(let i = 0; i < num_of_layers; i++){
-        schema_values.push(0)
+        schema_values.push(0);
     }
 
     let cur_increment_count = 0;
@@ -630,7 +630,7 @@ function power_of_two_build(model, num_of_layers){
 
         cur_increment_count++;
         
-        schema_values[i] = init_value
+        schema_values[i] = init_value;
 
         if(cur_increment_count>=layers_per_increment){
             //Cut the number of neurons for the next layer in half if it will remain 2 or more
@@ -639,10 +639,32 @@ function power_of_two_build(model, num_of_layers){
                 cur_increment_count = 0;
             }
         }
-        
+    }
+    return schema_values
+}
+
+function hourglass_build(model, num_of_layers){
+    let init_value = model.properties.hidden_layer_info.init_size;
+
+    const schema_values = []
+
+    for(let i = 0; i < num_of_layers; i++){
+        schema_values.push(0);
     }
 
-    return schema_values
+    for(let i = 0; i < num_of_layers; i++){
+        if(i<round_float(num_of_layers/2) && (!(num_of_layers%2!=0 && i==round_float((num_of_layers/2)-0.5)))){
+            schema_values[i] = init_value;
+            if(init_value/2 >= 2){
+                init_value = round_float(init_value/2);
+            }
+        }
+        else{
+            schema_values[i] = init_value;
+            init_value = round_float(init_value*2);
+        }
+    }
+    return schema_values;
 }
 
 function build_matrices(model){
@@ -657,7 +679,7 @@ function build_matrices(model){
     //This next line just lets us call the layers in order via index. 0 is the input layer
     const indexed_layers = Object.values(model.layers);
 
-    const style_map = {"flat":flat_build,"po2":power_of_two_build}
+    const style_map = {"flat":flat_build,"po2":power_of_two_build,"hourglass":hourglass_build}
 
     const hidden_count = model.properties.hidden_layer_info.count;
     const hidden_layer_schema = style_map[model.properties.hidden_layer_info.style](model, hidden_count)
