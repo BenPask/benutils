@@ -29,7 +29,7 @@ let  arr = [[1,2], [1,2], [1,2]];
 console.log("rounding test", benlib.round_float(.5));
 
 const model = benlib.neuralnet({
-    hidden_layer_info: {count:9, init_size:64, style:"hourglass"},
+    hidden_layer_info: {count:11, init_size:2, style:"hourglass", hourglass_operation:"*"},
     activation_type:"relu",
     learn_rate:.01,
     output_layer_info:{init_size:1, activation:"none"},

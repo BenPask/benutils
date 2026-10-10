@@ -412,7 +412,7 @@ function calculate_loss_gradient(model, target_value, layer_index){
         const post_activation_final_output = model.layers["output_layer"]["output"];
 
         for(const value of post_activation_final_output){
-        //CHANGE LATER, NOT ALWAYS SINGLE VALUE
+        //CHANGE LATER if no longer regression
         loss_gradient.push(value-target_value);
         }
         return loss_gradient;
@@ -633,7 +633,6 @@ function power_of_two_build(model, num_of_layers){
         schema_values[i] = init_value;
 
         if(cur_increment_count>=layers_per_increment){
-            //Cut the number of neurons for the next layer in half if it will remain 2 or more
             if(init_value/2 >= 2){
                 init_value = init_value/2;
                 cur_increment_count = 0;
@@ -641,6 +640,31 @@ function power_of_two_build(model, num_of_layers){
         }
     }
     return schema_values
+}
+
+function hourglass_value(model, value, inverse=false){
+    let hourglass_operator = model.properties.hidden_layer_info.hourglass_operation
+
+
+
+    const operation_map = {"/":"*", "sqroot":"**", "*":"/", "**":"sqroot"}
+
+    if(inverse){
+        hourglass_operator = operation_map[hourglass_operator]
+    }
+    
+    switch (hourglass_operator) {
+        case "/":
+            return value/2;
+        case "*":
+            return value*2;
+        case "sqroot":
+            return sqroot(value);
+        case "**":
+            return value**2;
+        default:
+            return value/2;
+    }
 }
 
 function hourglass_build(model, num_of_layers){
@@ -655,20 +679,21 @@ function hourglass_build(model, num_of_layers){
     for(let i = 0; i < num_of_layers; i++){
         if(i<round_float(num_of_layers/2) && (!(num_of_layers%2!=0 && i==round_float((num_of_layers/2)-0.5)))){
             schema_values[i] = init_value;
-            if(init_value/2 >= 2){
-                init_value = round_float(init_value/2);
+            if(hourglass_value(model, init_value) >= 2){
+                init_value = round_float(hourglass_value(model, init_value));
             }
         }
         else{
             schema_values[i] = init_value;
-            init_value = round_float(init_value*2);
+            if(hourglass_value(model, init_value) >= 2){
+                init_value = round_float(hourglass_value(model, init_value, true));
+            }
         }
     }
     return schema_values;
 }
 
 function build_matrices(model){
-    //build default structure CHANGE LATER
     model.layers["input_layer"] = {"output":[]};
     for(let i = 1;i<=model.properties.hidden_layer_info.count;i++){
         model.layers[`hidden_layer_${i}`] = {"main":{"weights":[],"biases":[]}, "delta":{"weights":[],"biases":[]},"preactivation":[], "output":[]};
@@ -983,7 +1008,7 @@ const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activ
 
 export function neuralnet({
     //default parameters for neurat net initialization
-    hidden_layer_info = {count:5, init_size:5, style:"flat"},
+    hidden_layer_info = {count:5, init_size:5, style:"flat", hourglass_operation:"/"},
     activation_type = "relu",
     learn_rate = 0.01,
     output_layer_info = {init_size:1, activation:"none"},
@@ -998,6 +1023,14 @@ export function neuralnet({
     metric_report_interval = 10}={}) {
 
         console.log(`now buidling model, set for ${epochs} epochs, ${activation_type} activation, and a learning rate of ${learn_rate}`);
+
+        hidden_layer_info = {
+            count:5, 
+            init_size:5, 
+            style:"flat", 
+            hourglass_operation:"/",
+            ...hidden_layer_info
+        }
 
         const model_properties = {
             hidden_layer_info:hidden_layer_info,
