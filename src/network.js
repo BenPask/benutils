@@ -1,7 +1,7 @@
-import './math.js'
-import './arrmat.js'
-import './activations.js'
-import './data.js'
+import {sqroot, zto_random, round_float, absolute_value} from './math.js'
+import {array_to_matrix, array_mean, arrmult, transpose_matrix, matmult, matadd, matsub} from './arrmat.js'
+import {activate, deriv_activate} from './activations.js'
+import {normalize_array, denormalize_array, shuffle_feature_data, } from './data.js'
 
 //-------NEURAL_NETWORK-------
 function generate_weight(model, prev_layer_size){

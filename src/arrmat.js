@@ -29,7 +29,6 @@ export function arrmult(array1, array2){
 }
 
 export function transpose_matrix(m){
-
     let output = [];
 
     if(!Array.isArray(m[0])){
