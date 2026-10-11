@@ -98,7 +98,7 @@ function deriv_no_activation(arr){
 const activation_map = {"none":no_activation,"relu":reluActivation,"sigmoid":sigmoid_activation,"tanh":tanh_activation,"leaky_relu":leaky_relu_activation};
 const deriv_acitvation_map = {"none":deriv_no_activation,"relu":deriv_relu_activation,"sigmoid":deriv_sigmoid_activation,"tanh":deriv_tanh_activation,"leaky":deriv_leaky_relu_activation};
 
-function activate(model, arr_in, o_layer=false){
+export function activate(model, arr_in, o_layer=false){
     if(o_layer == true){
         const acitvation_func = activation_map[model.properties.output_layer_info.activation];
         return acitvation_func(arr_in);
@@ -107,7 +107,7 @@ function activate(model, arr_in, o_layer=false){
     return acitvation_func(arr_in);
 }
 
-function deriv_activate(model, arr_in, o_layer=false){
+export function deriv_activate(model, arr_in, o_layer=false){
     if(o_layer == true){
         const acitvation_func = deriv_acitvation_map[model.properties.output_layer_info.activation];
         return acitvation_func(arr_in);
