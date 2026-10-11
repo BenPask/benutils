@@ -1,6 +1,6 @@
 {
   "name": "@benp2325/benutils",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "zero dependency personal library for math, array/matrix manipulation, and neural network modeling in JS",
   "homepage": "https://github.com/BenPask/benutils",
   "bugs": {
@@ -14,6 +14,10 @@
   "author": "Benjamin Pask",
   "type": "module",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "src/"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   }
