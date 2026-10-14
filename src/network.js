@@ -1,4 +1,4 @@
-import {sqroot, zto_random, round_float, absolute_value} from './math.js'
+import {sqroot, zto_random, round_float, absolute_value, closest_pow_of_two} from './math.js'
 import {array_to_matrix, array_mean, arrmult, transpose_matrix, matmult, matadd, matsub} from './arrmat.js'
 import {activate, deriv_activate} from './activations.js'
 import {normalize_array, denormalize_array, shuffle_feature_data, } from './data.js'
@@ -26,6 +26,7 @@ export function set_features(model, features_in){
     }
 
     for(const feat_name of Object.keys(features_in)){
+        features[feat_name] = [];
         for(const value of features_in[feat_name]){
             features[feat_name].push(value);
 
@@ -549,7 +550,7 @@ function train(model){
 
     const target_data = {};
  
-    const feature_data = model.properties.features;
+    const feature_data = {...model.properties.features};
     target_data["TARGET"] = model.properties.features.TARGET;
 
     delete feature_data["TARGET"];
@@ -594,8 +595,6 @@ function train(model){
     fill_matrices(model, feature_count);
 
     for(let e = 0; e<model.properties.epochs; e++){
-    
-        let total_epoch_loss = 0;
 
         let iterations_since_interval = 0;
 
@@ -618,17 +617,14 @@ function train(model){
                 update_weights_and_biases(model);
                 reset_deltas(model);
             }
-            total_epoch_loss += calculate_mse(epoch_predictions, epoch_targets);
-
-            
         }
 
-        if(iterations_since_interval%model.properties.metric_report_interval==0){
+        if(e % model.properties.metric_report_interval==0){
             rmse_list.push(calculate_rmse(model, epoch_predictions, epoch_targets));
             mae_list.push(calculate_mae(model, epoch_predictions, epoch_targets));
         }
 
-        loss_list.push(total_epoch_loss/training_observation_count);
+        loss_list.push(calculate_mse(epoch_predictions, epoch_targets));
 
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval);
@@ -725,8 +721,8 @@ ${learn_rate} learning rate`);
         const modelOut = {
             layers:{},
             properties:model_properties, 
-            train(feature_data, target_data){
-                train(this, feature_data, target_data)
+            train(){
+                train(this)
             },
             test(){
                 test(this)
