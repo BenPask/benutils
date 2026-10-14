@@ -19,47 +19,7 @@ export function zto_random(model=null){
 }
 
 export function xpo(value, power){
-
-    if(power == 0 || value == 1){
-        return 1;
-    }
-
-    if(value == 0){
-        return 0;
-    }
-
-
-
-    let is_negative = power < 0;
-    let effective_power = is_negative ? -power : power;
-
-    let current = 1;
-
-    if(effective_power < 1){
-        return root(value, 1 / effective_power);
-    } else if(Number.isInteger(effective_power)){
-        for(let i = 0; i<effective_power-1; i++){
-        current = current*value;
-        }
-    } else {
-        let whole_num = round_float(effective_power-0.5);
-        let partial_num = effective_power - whole_num;
-
-        let whole_result = value;
-        for (let i = 0; i < whole_num - 1; i++){
-            whole_result = whole_result * value;
-        }
-
-        let partial_result = root(value, 1/partial_num);
-
-        current = whole_result * partial_result;
-    }
-    
-    if(is_negative){
-        current = 1/current;
-    }
-    
-    return current;
+    return value**power
 }
 
 export function round_float(float){
