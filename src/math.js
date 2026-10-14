@@ -19,18 +19,43 @@ export function zto_random(model=null){
 }
 
 export function xpo(value, power){
-    let effective_power = power;
 
-    if(power<0){
-        effective_power = power * -1;
+    if(power == 0 || value == 1){
+        return 1;
     }
-    
-    let current = value;
-    for(let i = 0; i<effective_power-1; i++){
+
+    if(value == 0){
+        return 0;
+    }
+
+
+
+    let is_negative = power < 0;
+    let effective_power = is_negative ? -power : power;
+
+    let current = 1;
+
+    if(effective_power < 1){
+        return root(value, 1 / effective_power);
+    } else if(Number.isInteger(effective_power)){
+        for(let i = 0; i<effective_power-1; i++){
         current = current*value;
+        }
+    } else {
+        let whole_num = round_float(effective_power-0.5);
+        let partial_num = effective_power - whole_num;
+
+        let whole_result = value;
+        for (let i = 0; i < whole_num - 1; i++){
+            whole_result = whole_result * value;
+        }
+
+        let partial_result = root(value, 1/partial_num);
+
+        current = whole_result * partial_result;
     }
     
-    if(power<0){
+    if(is_negative){
         current = 1/current;
     }
     
@@ -52,25 +77,36 @@ export function absolute_value(value){
     return value
 }
 
-export function sqroot(value, tolerance=1e-15){
+export function root(value, nth_root, tolerance=1e-15){
     if(value<0){
         throw new Error("Cannot take the square root of negative numbers")
     }
     if(value == 0){
-        return 0
+        return 0;
     }
 
-    let guess = value/2
+    let guess = 0;
+
+    if(value < 1){
+        guess = 1;
+    } else {
+        guess = value/nth_root;
+    }
     
-    let iter = 0
+    let iter = 0;
+
+    const divisor = 1/nth_root;
+
     while(iter < 1000){
-        let next_guess = 0.5*(guess + value/guess)
+        
+        let denom = xpo(guess, nth_root - 1);
+        let next_guess = divisor*((nth_root-1) * guess + value / denom);
 
         if(absolute_value(guess - next_guess) < tolerance){
             return next_guess
         }
 
-        guess = next_guess
+        guess = next_guess;
         iter += 1;
     }
     return guess;
