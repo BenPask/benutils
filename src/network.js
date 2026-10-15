@@ -696,6 +696,35 @@ function test(model){
     
 }
 
+function predict(model, input_features){
+    model.layers["input_layer"]["output"] = [];
+    const maxMins = model.properties.feature_data.maxMins;
+    
+
+
+    for(const feat_name of Object.keys(input_features)){
+        const raw = input_features[feat_name];
+        const max = maxMins[feat_name]["max"];
+        const min = maxMins[feat_name]["min"];
+
+        const normalized_val = (raw - min)/(max - min);
+        model.layers["input_layer"]["output"].push(normalized_val);
+    }
+
+    for(let i = 1;i < Object.keys(model.layers).length; i++){
+        fwd_pass(model, i);
+    }
+
+    const raw_prediction = model.layers["output_layer"]["output"][0];
+
+    const og_min = maxMins["TARGET"]["min"];
+    const og_max = maxMins["TARGET"]["max"];
+
+    const denormalized_prediction = denormalize_array([raw_prediction], og_max, og_min);
+   
+    return denormalized_prediction[0];
+}
+
 export function neuralnet({
     //default parameters for neurat net initialization
     hidden_layer_info = {count:5, init_size:5, style:"flat", hourglass_operation:"/"},
@@ -755,17 +784,21 @@ ${learn_rate} learning rate`);
             layers:{},
             properties:model_properties, 
             train(){
-                train(this)
+                train(this);
             },
             test(){
-                test(this)
+                test(this);
             },
-            set_features(){
-                set_features(this)
+            predict(input_features){
+                return predict(this, input_features);
             },
-            set_features_csv(){
-                set_features_csv(this)
-            }};
+            set_features(features_in){
+                set_features(this, features_in);
+            },
+            set_features_csv(csvData, feature_selection){
+                set_features_csv(this, csvData, feature_selection);
+            }
+        };
         
         return modelOut;
     }

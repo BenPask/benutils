@@ -37,3 +37,12 @@ test('predictions_and_targets', () => {
     expect(model.properties.predictions_and_targets.training.predictions.length).toBe(50);
     expect(model.properties.predictions_and_targets.testing.predictions.length).toBe(126);
 });
+
+test('predict', () => {
+    expect(model.predict({
+    "RM":6.5750,
+    "AGE":65.20,
+    "TAX":296.0,
+    "LSTAT":4.98,
+    "CRIM":0.00632})).toBeDefined();
+});
