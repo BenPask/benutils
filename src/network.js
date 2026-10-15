@@ -1,4 +1,4 @@
-import {sqroot, zto_random, round_float, absolute_value, closest_pow_of_two} from './math.js'
+import {root, zto_random, round_float, absolute_value, closest_pow_of_two, xpo, euler} from './math.js'
 import {array_to_matrix, array_mean, arrmult, transpose_matrix, matmult, matadd, matsub} from './arrmat.js'
 import {activate, deriv_activate} from './activations.js'
 import {normalize_array, denormalize_array, shuffle_feature_data, } from './data.js'
@@ -6,7 +6,7 @@ import {normalize_array, denormalize_array, shuffle_feature_data, } from './data
 //-------NEURAL_NETWORK-------
 function generate_weight(model, prev_layer_size){
     //Utilizing he weight generation to prevent explosions to infinity
-    const limit = sqroot(6/prev_layer_size);
+    const limit = root(6/prev_layer_size, 2);
 
     const zeroToOne = zto_random(model);
 
@@ -152,7 +152,7 @@ function calculate_rmse(model, predictions, targets){
         total_residuals += residual;
     }
 
-    return(sqroot(total_residuals/prediction_count));
+    return(root(total_residuals/prediction_count, 2));
 }
 
 function calculate_mae(model, predictions, targets){
@@ -425,7 +425,7 @@ function hourglass_value(model, value, inverse=false){
         case "*":
             return value*2;
         case "sqroot":
-            return sqroot(value);
+            return root(value, 2);
         case "**":
             return value**2;
         default:
@@ -555,8 +555,6 @@ function train(model){
 
     delete feature_data["TARGET"];
 
-    
-    
     const training_observation_count = round_float(target_data["TARGET"].length * (1-model.properties.tt_split));
     const testing_observation_count = target_data["TARGET"].length - training_observation_count;  
     
@@ -626,6 +624,19 @@ function train(model){
 
         loss_list.push(calculate_mse(epoch_predictions, epoch_targets));
 
+        
+
+        const og_min = model.properties.feature_data.maxMins["TARGET"]["min"];
+        const og_max = model.properties.feature_data.maxMins["TARGET"]["max"];
+
+        const denormalized_predictions = denormalize_array(epoch_predictions, og_max, og_min);
+        const denormalized_targets = denormalize_array(epoch_targets, og_max, og_min);
+
+        const pat = model.properties.predictions_and_targets
+
+        pat.training.predictions.push(denormalized_predictions)
+        pat.training.targets.push(denormalized_targets)
+
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval);
             update_weights_and_biases(model);
@@ -660,6 +671,19 @@ function test(model){
     
     const metrics = model.properties.performance_metrics.testing;
 
+    const og_min = model.properties.feature_data.maxMins["TARGET"]["min"];
+    const og_max = model.properties.feature_data.maxMins["TARGET"]["max"];
+
+    const denormalized_predictions = denormalize_array(test_predictions, og_max, og_min);
+    const denormalized_targets = denormalize_array(test_targets, og_max, og_min);
+
+    
+
+    const pat = model.properties.predictions_and_targets
+
+    pat.testing.predictions = denormalized_predictions;
+    pat.testing.targets = denormalized_targets;
+
     metrics.loss = total_test_loss;
     metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
@@ -681,8 +705,11 @@ export function neuralnet({
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
     performance_metrics = {training:{loss_list:null, rmse_list:[], mae_list:[]},testing:{loss:null, rmse:null, r2:null, mae:null}},
+    predictions_and_targets = {training:{predictions:[], targets:[]}, testing:{predictions:null, targets:null}},
     normalization_statistics = {},
-    metric_report_interval = 10}={}) {
+    metric_report_interval = 10
+    
+    }={}) {
 
         hidden_layer_info = {
             count:5, 
@@ -716,7 +743,8 @@ ${learn_rate} learning rate`);
 
             stored_testing_data:stored_testing_data,
             performance_metrics:performance_metrics,
-            normalization_statistics:normalization_statistics};
+            normalization_statistics:normalization_statistics,
+            predictions_and_targets:predictions_and_targets};
 
         const modelOut = {
             layers:{},

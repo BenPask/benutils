@@ -1,3 +1,5 @@
+import {root, zto_random, round_float, absolute_value, closest_pow_of_two, xpo, euler} from './math.js'
+
 function reluActivation(arr){
     let arrOut = [];
     arrOut = arr.map(x => x > 0 ? x : 0);

@@ -1,6 +1,6 @@
 {
   "name": "@benp2325/benutils",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "zero dependency personal library for math, array/matrix manipulation, and neural network modeling in JS",
   "homepage": "https://github.com/BenPask/benutils",
   "bugs": {
@@ -19,6 +19,9 @@
     "src/"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2"
   }
 }

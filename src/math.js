@@ -1,5 +1,5 @@
 //-------MATH-------
-const euler = 2.718281828459045;
+export const euler = 2.718281828459045;
 let global_seed = 75128;
 
 
