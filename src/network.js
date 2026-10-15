@@ -637,6 +637,9 @@ function train(model){
         pat.training.predictions.push(denormalized_predictions)
         pat.training.targets.push(denormalized_targets)
 
+        const epoch_residuals = denormalized_targets.map((target, i) => target - denormalized_predictions[i]);
+        pat.training.residuals.push(epoch_residuals);
+
         if(iterations_since_interval>0){
             average_deltas(model, iterations_since_interval);
             update_weights_and_biases(model);
@@ -684,6 +687,8 @@ function test(model){
     pat.testing.predictions = denormalized_predictions;
     pat.testing.targets = denormalized_targets;
 
+    pat.testing.residuals = pat.testing.targets.map((target, i) => target - pat.testing.predictions[i]);
+
     metrics.loss = total_test_loss;
     metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
@@ -705,7 +710,7 @@ export function neuralnet({
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
     performance_metrics = {training:{loss_list:null, rmse_list:[], mae_list:[]},testing:{loss:null, rmse:null, r2:null, mae:null}},
-    predictions_and_targets = {training:{predictions:[], targets:[]}, testing:{predictions:null, targets:null}},
+    predictions_and_targets = {training:{predictions:[], targets:[], residuals:[]}, testing:{predictions:null, targets:null, residuals:null}},
     normalization_statistics = {},
     metric_report_interval = 10
     
