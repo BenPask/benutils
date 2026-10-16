@@ -1,6 +1,6 @@
 {
   "name": "@benp2325/benutils",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "zero dependency personal library for math, array/matrix manipulation, and neural network modeling in JS. Includes benvis, a graph visualization sub package for benutils.",
   "homepage": "https://github.com/BenPask/benutils",
   "bugs": {

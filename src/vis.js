@@ -44,8 +44,8 @@ export function scatter({
         points[i].y = y_values[i];
     }
     
-    x_step = x_step == null ?  x.max/(x_values.length-1) : x_step;
-    y_step = y_step == null ?  y.max/(y_values.length-1) : y_step;
+    x_step = x_step == null ?  x.max/10 : x_step;
+    y_step = y_step == null ?  y.max/10 : y_step;
 
     const axis_point_mod = 8
     
