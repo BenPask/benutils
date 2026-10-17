@@ -700,8 +700,6 @@ function predict(model, input_features){
     model.layers["input_layer"]["output"] = [];
     const maxMins = model.properties.feature_data.maxMins;
     
-
-
     for(const feat_name of Object.keys(input_features)){
         const raw = input_features[feat_name];
         const max = maxMins[feat_name]["max"];
@@ -722,7 +720,7 @@ function predict(model, input_features){
 
     const denormalized_prediction = denormalize_array([raw_prediction], og_max, og_min);
    
-    return denormalized_prediction[0];
+    return [denormalized_prediction[0], model.layers];
 }
 
 export function neuralnet({
