@@ -434,24 +434,23 @@ function hourglass_build(model, num_of_layers){
 
     const schema_values = [];
 
-    for(let i = 0; i < num_of_layers; i++){
-        schema_values.push(0);
+    let curr = init_value;
+
+    const half = round_float(num_of_layers/2);
+
+    for(let i = 0; i<half; i++){
+        schema_values.push(curr);
+        let next = hourglass_value(model, curr);
+        if(next >= 2){
+            curr = round_float(next);
+        }
     }
 
-    for(let i = 0; i < num_of_layers; i++){
-        if(i<round_float(num_of_layers/2) && (!(num_of_layers%2!=0 && i==round_float((num_of_layers/2)-0.5)))){
-            schema_values[i] = init_value;
-            if(hourglass_value(model, init_value) >= 2){
-                init_value = round_float(hourglass_value(model, init_value));
-            }
-        }
-        else{
-            schema_values[i] = init_value;
-            if(hourglass_value(model, init_value) >= 2){
-                init_value = round_float(hourglass_value(model, init_value, true));
-            }
-        }
+    const mirror_count = num_of_layers - half;
+    for(let i = mirror_count -1; i >= 0; i--){
+        schema_values.push(schema_values[i]);
     }
+
     return schema_values;
 }
 
