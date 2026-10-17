@@ -716,7 +716,6 @@ function predict(model, input_features){
 
     const denormalized_prediction = denormalize_array([raw_prediction], og_max, og_min);
    
-    console.log(model.layers["output_layer"])
     return [denormalized_prediction[0], JSON.parse(JSON.stringify(model.layers))];
 }
 
