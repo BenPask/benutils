@@ -59,3 +59,7 @@ test('predict-layer-logging', () => {
     "LSTAT":6.98,
     "CRIM":0.00664})[1]['output_layer']['output'][0]).toBe(false);
 });
+
+test('metric reporting', () => {
+    expect(model.properties.performance_metrics.testing.mse).toBeDefined();
+});

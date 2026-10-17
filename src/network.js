@@ -543,6 +543,8 @@ function train(model){
     const loss_list = [];
     const rmse_list = model.properties.performance_metrics.training.rmse_list;
     const mae_list = model.properties.performance_metrics.training.mae_list;
+    const r2_list = model.properties.performance_metrics.training.r2_list;
+    const mse_list = model.properties.performance_metrics.training.mse_list;
 
     const target_data = {};
  
@@ -616,17 +618,18 @@ function train(model){
         if(e % model.properties.metric_report_interval==0){
             rmse_list.push(calculate_rmse(model, epoch_predictions, epoch_targets));
             mae_list.push(calculate_mae(model, epoch_predictions, epoch_targets));
+            r2_list.push(calculate_rsquared(model, epoch_predictions, epoch_targets))
         }
 
         loss_list.push(calculate_mse(epoch_predictions, epoch_targets));
-
-        
 
         const og_min = model.properties.feature_data.maxMins["TARGET"]["min"];
         const og_max = model.properties.feature_data.maxMins["TARGET"]["max"];
 
         const denormalized_predictions = denormalize_array(epoch_predictions, og_max, og_min);
         const denormalized_targets = denormalize_array(epoch_targets, og_max, og_min);
+
+        mse_list.push(calculate_mse(denormalized_predictions, denormalized_targets));
 
         const pat = model.properties.predictions_and_targets
 
@@ -686,6 +689,7 @@ function test(model){
     pat.testing.residuals = pat.testing.targets.map((target, i) => target - pat.testing.predictions[i]);
 
     metrics.loss = total_test_loss;
+    metrics.mse = denormalize_array([total_test_loss], og_max, og_min)[0]
     metrics.rmse = calculate_rmse(model, test_predictions, test_targets);
     metrics.mae = calculate_mae(model, test_predictions, test_targets);
     metrics.r2 = calculate_rsquared(model, test_predictions, test_targets);
@@ -732,7 +736,7 @@ export function neuralnet({
     features = {},
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
-    performance_metrics = {training:{loss_list:null, rmse_list:[], mae_list:[]},testing:{loss:null, rmse:null, r2:null, mae:null}},
+    performance_metrics = {training:{loss_list:null, mse_list:[], rmse_list:[], mae_list:[], r2_list:[]},testing:{loss:null, mse:null, rmse:null, r2:null, mae:null}},
     predictions_and_targets = {training:{predictions:[], targets:[], residuals:[]}, testing:{predictions:null, targets:null, residuals:null}},
     normalization_statistics = {},
     metric_report_interval = 10
