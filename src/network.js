@@ -104,7 +104,6 @@ function fwd_pass(model, layer_index){
     const t_prev_layer_output = transpose_matrix(prev_layer_output);
 
     const pre_t_multiplied_output = matmult(weight_matrix, t_prev_layer_output);
-    
     const multiplied_output = transpose_matrix(pre_t_multiplied_output);
     
     let arr_out = [];
@@ -112,18 +111,15 @@ function fwd_pass(model, layer_index){
     for(let i = 0;i<multiplied_output[0].length;i++){
         arr_out.push(multiplied_output[0][i]+bias_arr[i]);
     }
+
+
     
-    indexed_layers[layer_index]["preactivation"] = arr_out;
+    indexed_layers[layer_index]["preactivation"] = [...arr_out];
 
     //dynamic activation function based on model.properties.activation_type
-    if(layer_index == indexed_layers.length-1){
-        arr_out = activate(model, arr_out, true);
-    }
-    else{
-        arr_out = activate(model, arr_out);
-    }
+    let activated = layer_index == indexed_layers.length - 1 ? activate(model, arr_out, true) : activate(model, arr_out)
     
-    indexed_layers[layer_index]["output"] = arr_out;
+    indexed_layers[layer_index]["output"] = [...activated];
 }
 
 function calculate_mse(predictions, targets){

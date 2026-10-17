@@ -46,3 +46,16 @@ test('predict', () => {
     "LSTAT":4.98,
     "CRIM":0.00632})).toBeDefined();
 });
+
+test('predict-layer-logging', () => {
+    expect(model.predict({
+    "RM":6.5750,
+    "AGE":65.20,
+    "TAX":296.0,
+    "LSTAT":4.98,
+    "CRIM":0.00632})[1]['output_layer']['output'][0] == model.predict({"RM":13.5750,
+    "AGE":85.20,
+    "TAX":299.0,
+    "LSTAT":6.98,
+    "CRIM":0.00664})[1]['output_layer']['output'][0]).toBe(false);
+});
