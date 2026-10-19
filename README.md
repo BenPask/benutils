@@ -1,3 +1,7 @@
+![Dependencies](https://img.shields.io/badge/dependencies-zero-success)
+[![npm version](https://img.shields.io/npm/v/@benp2325/benutils?color=red)](https://www.npmjs.com/package/@benp2325/benutils)
+![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?logo=javascript&logoColor=black)
+
 # @benp2325/benutils
 
 A zero-dependency, vanilla JavaScript library built completely from scratch for low-level matrix manipulation and neural network modeling. Also includes a custom scatterplot creation module that returns an HTML canvas element. 
@@ -11,7 +15,7 @@ Jump to [Model Functions](#model-functions)
 
 # Getting Started
 
-You can dowload benutils and it's sub package, vis, simply via npm:
+You can dowload benutils and its sub-package, vis, simply via npm:
 
 ```
 npm i @benp2325/benutils
@@ -49,7 +53,7 @@ const input_data = {
 }
 ```
 
-For the .set_features_csv() method, a JS object that specifies the selected columns via index must be passed. This is for ease, as it allows users to import whole datasets and select/switch features as they work. The method automatically detects and unincludes headers, so there is no need to remove them. 
+For the .set_features_csv() method, a JS object that specifies the selected columns via index must be passed. This is for ease, as it allows users to import whole datasets and select/switch features as they work. The method automatically detects and strips headers, so there is no need to remove them. 
 
 As a .csv (stored as a variable):
 ```
@@ -66,7 +70,7 @@ feature_selection = {
 
 Data will not be passed into the model until you call model.train() later in the program.
 
-Once your input data is stored in one of those 2 compatatible formats, you can create a model via:
+Once your input data is stored in one of those 2 compatible formats, you can create a model via:
 ```
 const model = benutils.neuralnet()
 ```
