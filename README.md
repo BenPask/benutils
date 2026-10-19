@@ -1,6 +1,84 @@
 # @benp2325/benutils
 
-A zero-dependency, vanilla JavaScript library built completely from scratch for math utilities, array/matrix manipulation, and neural network modeling.
+A zero-dependency, vanilla JavaScript library built completely from scratch for low-level matrix manipulation and neural network modeling. Also includes a custom scatterplot creation module that returns an HTML canvas element. 
 
 Public npm package page:
 https://www.npmjs.com/package/@benp2325/benutils?activeTab=readme
+
+This project was created as a learning exercise to develop first-principle neural network engineering, troubleshooting, and analysis experience. Additionally, it was created alongside and served as an engine for an interactive model creation/visualization web-application that I led a student team to create. The application is being hosted online and doubles as a presentation/evaluation tool for this package. Extensive features are available and all run fully in the browser. Created models are trained on real-world data scraped from an API. [Link to VFL NN Model Studio](https://github.com/BenPask/VFL-NN-Model-Studio). 
+
+Jump to [Model Functions](#model-functions)
+
+# Getting Started
+
+You can dowload benutils and it's sub package, vis, simply via npm:
+
+```
+npm i @benp2325/benutils
+```
+
+You can also import benutils into your web projects by pasting:
+```
+<script type="importmap">
+{
+  "imports": {
+    "@benp2325/benutils": "https://cdn.jsdelivr.net/npm/@benp2325/benutils@1.1.0/index.js",
+    "@benp2325/benutils/vis": "https://cdn.jsdelivr.net/npm/@benp2325/benutils@1.1.0/src/vis.js"
+  }
+}
+</script>
+```
+Into the header of your projects html file. 
+
+# Creating A Model
+
+Creating a neural network model using benutils only requires a few simple method calls.
+
+Firstly, make sure to store your input features as either a JavaScript object with string labels as the keys and arrays as the values or a .csv file stored as a variable.
+
+_Regardless of importing method, all features must have an equal number of observations and their target feature must be labeled TARGET in all caps._
+
+As an object:
+```
+const input_data = {
+    "FEAT1":[42, 346, 256, 2324, 5234, 42, 23, 78],
+    "FEAT2":[352, 234, 23, 234, 23, 46, 77, 32],
+    "FEAT3":[3222, 234, 56, 234, 78, 46, 97, 1],
+    //TARGET FEATURE MUST BE LABELED "TARGET" EXACTLY AS SHOWN
+    "TARGET":[22, 44, 34, 346, 3456, 342, 23, 277]
+}
+```
+
+For the .set_features_csv() method, a JS object that specifies the selected columns via index must be passed. This is for ease, as it allows users to import whole datasets and select/switch features as they work. The method automatically detects and unincludes headers, so there is no need to remove them. 
+
+As a .csv (stored as a variable):
+```
+import {rawCsvData} from '/path-to-file.csv'
+
+feature_selection = {
+    "FEAT1":0,
+    "FEAT2":5,
+    "FEAT3":3,
+//TARGET FEATURE MUST BE LABELED "TARGET" EXACTLY AS SHOWN
+    "TARGET":6
+}
+```
+
+Data will not be passed into the model until you call model.train() later in the program.
+
+Once your input data is stored in one of those 2 compatatible formats, you can create a model via:
+```
+const model = benutils.neuralnet()
+```
+
+Creating a model this way will result in the default values for every argument. 
+
+### Arguments for benutils.neuralnet()
+
+hidden_layer_info - 
+
+
+
+
+
+
