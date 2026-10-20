@@ -82,24 +82,39 @@ Creating a model this way will result in the default values for every argument.
 The .neuralnet() function accepts a configuration object to customize various properties of the model.
 
 ```
-hidden_layer_info: {
-  count:<integer>, //Number of hidden layers
-  init_size:5, //Neuron count of the first hidden layer, other layer sizes defined by architecture 
-  style:<string>, //"Flat", "Po2", or "Hourglass". For a detailed look at how architectures are applied, see the architecture types section of this document. 
+benutils.neuralnet({
 
-  hourglass_operation:<string> //"/", "*", "**" or "sqroot". Only applies to models with the "Hourglass" architecture type. 
+  hidden_layer_info: {
+    count:<integer>, //Number of hidden layers
+
+    init_size:5, //Neuron count of the first hidden layer, other layer sizes are determined by architecture 
+
+    style:<string>, //"Flat", "Po2", or "Hourglass". For a detailed look at how architectures are applied, see the architecture types section of this document. 
+
+    hourglass_operation:<string> //"/", "*", "**" or "sqroot". Only applies to models with the "Hourglass" architecture type. 
   },
-activation_type: <string> //"relu", "leaky_relu", "tanh", "sigmoid"
-learn_rate: <float>, //Constant that delta values will be multiplied by to smooth learning
-output_layer_info: {
-  init_size: <integer>, //For current exclusively regression based implementation, should remain 1
-  activation: <string> //Activation for the output layer, same options as activation_type
-}, 
-epochs: <integer>, //Number of times the model runs through every observation
-batch_size: <integer>, //Interval, number of forward passes before applying delta graidents
-tt_split: <float>, //Value from 0-1, represents the percentage of the data reserved for testing
-random_seed: <integer>, //Number that determines the sequence of random generated values, 
-metric_report_interval: <integer> //Interval, number of obervations between the calculation and storage of performance metrics that require denormalization
+
+  activation_type: <string> //"relu", "leaky_relu", "tanh", "sigmoid"
+
+  learn_rate: <float>, //Constant that delta values will be multiplied by to smooth learning
+
+  output_layer_info: {
+    init_size: <integer>, //For exclusively regression based implementation, should remain 1
+
+    activation: <string> //Activation for the output layer, same options as activation_type
+  }, 
+  
+  epochs: <integer>, //Number of times the model runs through every observation
+
+  batch_size: <integer>, //Interval, number of forward passes before applying delta graidents
+
+  tt_split: <float>, //Value from 0-1, represents the percentage of the data reserved for testing
+
+  random_seed: <integer>, //Number that determines the sequence of random generated values, 
+
+  metric_report_interval: <integer> //Interval, number of obervations between the calculation and storage of performance metrics that require denormalization
+})
+
 ```
 
 
