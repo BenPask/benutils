@@ -4,12 +4,12 @@
 
 # @benp2325/benutils
 
-A zero-dependency, vanilla JavaScript library built completely from scratch for low-level matrix manipulation and neural network modeling. Also includes a custom scatterplot creation module that returns an HTML canvas element. 
+**benutils is a zero-dependency JavaScript library for matrix manipulation and neural-network modeling, implemented from scratch. It includes configurable network architectures, training and evaluation utilities, and a custom Canvas-based scatterplot module. It serves as the engine for VFL NN Model Studio, an interactive application for training and inspecting models in the browser.**
+
+The project, originating in a passionate drive to understand and recreate the complex nature of neural networks, resulted in learning opportunities, skill development, and a published, fully reusable API.
 
 Public npm package page:
 https://www.npmjs.com/package/@benp2325/benutils?activeTab=readme
-
-This project was created as a learning exercise to develop first-principles neural network engineering, troubleshooting, and analysis experience. Additionally, it was created alongside and served as an engine for an interactive model creation/visualization web application that I led a student team to create. The application is being hosted online and doubles as a presentation/evaluation tool for this package. Extensive features are available, and all run fully in the browser. Created models are trained on real-world data scraped from an API. 
 
 [Link to VFL NN Model Studio](https://github.com/BenPask/VFL-NN-Model-Studio). 
 <img width="940" height="540" alt="image" src="https://github.com/user-attachments/assets/3c6e065d-f8ea-4f22-91c5-3b779616d80c" />
@@ -18,7 +18,7 @@ Jump to: [Model Demonstration](#model-demonstration) [Creating A Model](#creatin
 
 # Getting Started
 
-You can download benutils and its sub-package, vis, simply via npm:
+You can download benutils and its sub-package, **vis**, via npm:
 
 ```
 npm i @benp2325/benutils
@@ -41,7 +41,11 @@ Into the header of your project's HTML file.
 
 The following is a start-to-finish reproducible example of creating and training a model with benutils. 
 
-In this example, the model is trained on the [Boston Housing Dataset](https://www.kaggle.com/code/prasadperera/the-boston-housing-dataset). Target: MEDV (Median value of home); 13 input features, 506 observations.
+In this example, the model is trained on the [Boston Housing Dataset](https://www.kaggle.com/code/prasadperera/the-boston-housing-dataset) 
+
+_housing.js, as it appears in this demonstration, is available in the [test folder](https://github.com/BenPask/benutils/tree/main/tests)._
+
+Target: MEDV (Median value of home); 13 input features, 506 observations.
 
 ```
 import * as benutils from "@benp2325/benutils";
@@ -79,7 +83,7 @@ const model = benutils.neuralnet({
     },
     epochs: 100,
     tt_split: 0.25,
-    random_seed: 58373 // specified seed to make training reproducible 
+    random_seed: 58373 // specified seed makes training reproducible; VFL NN STUDIO randomizes it by setting seeds randomly based on user interaction. 
 });
 
 model.set_features_csv(rawCsvData, feature_selection)
@@ -232,7 +236,7 @@ Creating and training a neural network model using benutils only requires a few 
 
 You can create a model via:
 ```
-const model = benutils.neuralnet()
+const model = benutils.neuralnet();
 ```
 
 Creating a model this way will result in the default values for every argument. 
@@ -256,9 +260,9 @@ benutils.neuralnet({
     "Hourglass" architecture type. 
   },
 
-  activation_type: <string> //"relu", "leaky_relu", "tanh", "sigmoid"
+  activation_type: <string>, //"relu", "leaky_relu", "tanh", "sigmoid"
 
-  learn_rate: <float>, //Constant that delta values will be multiplied by to smooth learning
+  learn_rate: <float> //Constant that delta values will be multiplied by to smooth learning
 
   output_layer_info: {
     init_size: <integer>, //For exclusively regression-based implementation, should remain 1
@@ -276,7 +280,7 @@ benutils.neuralnet({
 
   metric_report_interval: <integer> //Interval, number of observations between the calculation and 
   storage of the training set's RMSE, MAE, and R2.
-})
+});
 ```
 
 ### Importing/setting features
@@ -320,7 +324,7 @@ Normalizing your feature data in benutils (if not already normalized) is a singl
 Feature maximums and minimums are stored during the setting methods. The only method that must be called to normalize all features is:
 
 ```
-benutils.normalize_features(model)
+benutils.normalize_features(model);
 ```
 
 ### Training and Testing Models
@@ -340,13 +344,14 @@ model.test();
 To use a trained model to predict a single observation, call:
 ```
 model.predict({
-  "FEAT1":<numerical value>
-  "FEAT2":<numerical value>
-  "FEAT3":<numerical value>
+  "FEAT1":<numerical value>,
+  "FEAT2":<numerical value>,
+  "FEAT3":<numerical value>,
   ...
-})  
+});  
 ```
-The method returns an array with the predicted value as the first element and the layer values that led to it. 0 (be aware that model.properties.layers can easily become a large object to return for many consecutive predictions on larger models)
+The method returns an array with the predicted value as the first element and the layer values that led to it. 
+_(Be aware that model.properties.layers can easily become a large object to return for many consecutive predictions on larger models)_
 
 ### Model Evaluation & Performance Metrics
 
