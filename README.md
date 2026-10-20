@@ -89,9 +89,11 @@ benutils.neuralnet({
 
     init_size:5, //Neuron count of the first hidden layer, other layer sizes are determined by architecture 
 
-    style:<string>, //"Flat", "Po2", or "Hourglass". For a detailed look at how architectures are applied, see the architecture types section of this document. 
+    style:<string>, //"Flat", "Po2", or "Hourglass". For a detailed look at how architectures are 
+    applied, see the architecture types section of this document. 
 
-    hourglass_operation:<string> //"/", "*", "**" or "sqroot". Only applies to models with the "Hourglass" architecture type. 
+    hourglass_operation:<string> //"/", "*", "**" or "sqroot". Only applies to models with the 
+    "Hourglass" architecture type. 
   },
 
   activation_type: <string> //"relu", "leaky_relu", "tanh", "sigmoid"
@@ -103,7 +105,7 @@ benutils.neuralnet({
 
     activation: <string> //Activation for the output layer, same options as activation_type
   }, 
-  
+
   epochs: <integer>, //Number of times the model runs through every observation
 
   batch_size: <integer>, //Interval, number of forward passes before applying delta graidents
@@ -112,7 +114,8 @@ benutils.neuralnet({
 
   random_seed: <integer>, //Number that determines the sequence of random generated values, 
 
-  metric_report_interval: <integer> //Interval, number of obervations between the calculation and storage of performance metrics that require denormalization
+  metric_report_interval: <integer> //Interval, number of obervations between the calculation and 
+  storage of performance metrics that require denormalization
 })
 
 ```
