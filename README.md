@@ -1,6 +1,6 @@
-![Dependencies](https://img.shields.io/badge/dependencies-zero-success)
 [![npm version](https://img.shields.io/npm/v/@benp2325/benutils?color=red)](https://www.npmjs.com/package/@benp2325/benutils)
 ![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?logo=javascript&logoColor=black)
+![Dependencies](https://img.shields.io/badge/dependencies-zero-success)
 
 # @benp2325/benutils
 
@@ -79,7 +79,28 @@ Creating a model this way will result in the default values for every argument.
 
 ### Arguments for benutils.neuralnet()
 
-hidden_layer_info - 
+The .neuralnet() function accepts a configuration object to customize various properties of the model.
+
+```
+hidden_layer_info: {
+  count:<integer>, //Number of hidden layers
+  init_size:5, //Neuron count of the first hidden layer, other layer sizes defined by architecture 
+  style:<string>, //"Flat", "Po2", or "Hourglass". For a detailed look at how architectures are applied, see the architecture types section of this document. 
+
+  hourglass_operation:<string> //"/", "*", "**" or "sqroot". Only applies to models with the "Hourglass" architecture type. 
+  },
+activation_type: <string> //"relu", "leaky_relu", "tanh", "sigmoid"
+learn_rate: <float>, //Constant that delta values will be multiplied by to smooth learning
+output_layer_info: {
+  init_size: <integer>, //For current exclusively regression based implementation, should remain 1
+  activation: <string> //Activation for the output layer, same options as activation_type
+}, 
+epochs: <integer>, //Number of times the model runs through every observation
+batch_size: <integer>, //Interval, number of forward passes before applying delta graidents
+tt_split: <float>, //Value from 0-1, represents the percentage of the data reserved for testing
+random_seed: <integer>, //Number that determines the sequence of random generated values, 
+metric_report_interval: <integer> //Interval, number of obervations between the calculation and storage of performance metrics that require denormalization
+```
 
 
 
