@@ -17,7 +17,7 @@ function generate_weight(model, prev_layer_size){
 
 export function set_features(model, features_in){
     const maxMins = model.properties.feature_data.maxMins;
-    const features = {};
+    let features = {};
 
     for(const feat_name of Object.keys(features_in)){
         const first_val = features_in[feat_name][0];
@@ -588,6 +588,12 @@ function train(model){
     //build simple structure without columns or weights, but including rows via the neuron count(size) of each layer
     build_matrices(model);
     fill_matrices(model, feature_count);
+
+    console.log("--input_layer--","\nvalues:", model.layers["input_layer"]["output"]);
+    console.log();
+    console.log("--hidden_layer_1--", "weights:", model.layers["hidden_layer_1"]["main"]["weights"], "\nbiases:", model.layers["hidden_layer_1"]["main"]["biases"], "\nvalues:", model.layers["hidden_layer_1"]["output"]);
+    console.log();
+    console.log("--output_layer--", "\nweights:", model.layers["output_layer"]["main"]["weights"], "\nbiases:", model.layers["output_layer"]["main"]["biases"], "\nvalues:", model.layers["output_layer"]["output"]);
 
     for(let e = 0; e<model.properties.epochs; e++){
 

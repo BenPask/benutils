@@ -79,6 +79,5 @@ test('predict-layer-logging', () => {
 
 test('metric reporting', () => {
     expect(model.properties.performance_metrics.testing.mse).toBeDefined();
-    console.log(model.properties.performance_metrics)
 });
 
