@@ -15,7 +15,7 @@ function generate_weight(model, prev_layer_size){
     return weightOut;
 }
 
-export function set_features(model, features_in){
+export function set_features(model, features_in, shuffle=true){
     const maxMins = model.properties.feature_data.maxMins;
     let features = {};
 
@@ -34,7 +34,10 @@ export function set_features(model, features_in){
             if(value<maxMins[feat_name]["min"]) maxMins[feat_name]["min"] = value;
         }
     }
-    features = shuffle_feature_data(features, model);
+    if(shuffle == true){
+        features = shuffle_feature_data(features, model);
+    }
+    
     model.properties.features = features;
 }
 
@@ -795,8 +798,8 @@ ${learn_rate} learning rate`);
             predict(input_features){
                 return predict(this, input_features);
             },
-            set_features(features_in){
-                set_features(this, features_in);
+            set_features(features_in, shuffle=false){
+                set_features(this, features_in, shuffle);
             },
             set_features_csv(csvData, feature_selection){
                 set_features_csv(this, csvData, feature_selection);
