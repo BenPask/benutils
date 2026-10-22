@@ -592,12 +592,6 @@ function train(model){
     build_matrices(model);
     fill_matrices(model, feature_count);
 
-    console.log("--input_layer--","\nvalues:", model.layers["input_layer"]["output"]);
-    console.log();
-    console.log("--hidden_layer_1--", "weights:", model.layers["hidden_layer_1"]["main"]["weights"], "\nbiases:", model.layers["hidden_layer_1"]["main"]["biases"], "\nvalues:", model.layers["hidden_layer_1"]["output"]);
-    console.log();
-    console.log("--output_layer--", "\nweights:", model.layers["output_layer"]["main"]["weights"], "\nbiases:", model.layers["output_layer"]["main"]["biases"], "\nvalues:", model.layers["output_layer"]["output"]);
-
     for(let e = 0; e<model.properties.epochs; e++){
 
         let iterations_since_interval = 0;
