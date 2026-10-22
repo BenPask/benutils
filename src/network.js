@@ -689,6 +689,7 @@ function test(model){
 
     const pat = model.properties.predictions_and_targets
 
+    pat.testing.raw_predictions = test_predictions;
     pat.testing.predictions = denormalized_predictions;
     pat.testing.targets = denormalized_targets;
 
@@ -743,7 +744,7 @@ export function neuralnet({
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
     performance_metrics = {training:{loss_list:null, mse_list:[], rmse_list:[], mae_list:[], r2_list:[]},testing:{loss:null, mse:null, rmse:null, r2:null, mae:null}},
-    predictions_and_targets = {training:{raw_predictions:null, predictions:[], targets:[], residuals:[]}, testing:{predictions:null, targets:null, residuals:null}},
+    predictions_and_targets = {training:{raw_predictions:[], predictions:[], targets:[], residuals:[]}, testing:{raw_predictions:null, predictions:null, targets:null, residuals:null}},
     normalization_statistics = {},
     metric_report_interval = 10
     
