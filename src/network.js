@@ -41,7 +41,7 @@ export function set_features(model, features_in, shuffle=true){
     model.properties.features = features;
 }
 
-export function set_features_csv(model, csvData, feature_selection){
+export function set_features_csv(model, csvData, feature_selection, shuffle=true){
     csvData = csvData.trim().split('\n').map(row=>row.split(','));
 
     //csv header safegaurd, default=0 or "no headers"
@@ -78,7 +78,10 @@ export function set_features_csv(model, csvData, feature_selection){
         }
     }
 
-    features = shuffle_feature_data(features, model);
+    if(shuffle==true){
+        features = shuffle_feature_data(features, model);
+    }
+    
     model.properties.features = features;
 }
 
@@ -633,10 +636,11 @@ function train(model){
 
         mse_list.push(calculate_mse(denormalized_predictions, denormalized_targets));
 
-        const pat = model.properties.predictions_and_targets
+        const pat = model.properties.predictions_and_targets;
 
-        pat.training.predictions.push(denormalized_predictions)
-        pat.training.targets.push(denormalized_targets)
+        pat.training.raw_predictions = epoch_predictions;
+        pat.training.predictions.push(denormalized_predictions);
+        pat.training.targets.push(denormalized_targets);
 
         const epoch_residuals = denormalized_targets.map((target, i) => target - denormalized_predictions[i]);
         pat.training.residuals.push(epoch_residuals);
@@ -739,7 +743,7 @@ export function neuralnet({
     feature_data = {maxMins:{}},
     stored_testing_data = {t_feature_data:null, t_target_data:null},
     performance_metrics = {training:{loss_list:null, mse_list:[], rmse_list:[], mae_list:[], r2_list:[]},testing:{loss:null, mse:null, rmse:null, r2:null, mae:null}},
-    predictions_and_targets = {training:{predictions:[], targets:[], residuals:[]}, testing:{predictions:null, targets:null, residuals:null}},
+    predictions_and_targets = {training:{raw_predictions:null, predictions:[], targets:[], residuals:[]}, testing:{predictions:null, targets:null, residuals:null}},
     normalization_statistics = {},
     metric_report_interval = 10
     
@@ -792,11 +796,11 @@ ${learn_rate} learning rate`);
             predict(input_features){
                 return predict(this, input_features);
             },
-            set_features(features_in, shuffle=false){
+            set_features(features_in, shuffle=true){
                 set_features(this, features_in, shuffle);
             },
-            set_features_csv(csvData, feature_selection){
-                set_features_csv(this, csvData, feature_selection);
+            set_features_csv(csvData, feature_selection, shuffle=true){
+                set_features_csv(this, csvData, feature_selection, shuffle);
             }
         };
         
